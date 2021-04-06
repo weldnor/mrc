@@ -2,23 +2,23 @@
 <head>
     <meta charset="utf-8">
     <link rel="styleSheet" href="style.css" type="text/css" media="screen">
+    <script src="js/kurento-utils.js"></script>
+    <script src="js/getScreenId.js"></script>
+    <script src="js/index.js"></script>
     <title>mrc</title>
 </head>
 <body>
 
-<h1>Websocket test</h1>
+<div>
+    <h1>Websocket test</h1>
+    <div>
+        <video id="video" autoplay width="640px" height="480px"></video>
+        <video id="webcam" autoplay width="640px" height="480px"></video>
+    </div>
 
-<script>
-    let socket = new WebSocket('ws://' + location.host + '/ws');
-
-    socket.addEventListener('open', function () {
-        socket.send('Hello Server!');
-    });
-
-    socket.addEventListener('message', function (event) {
-        console.log('Message from server ', event.data);
-    });
-</script>
+    <button onclick="presenter()">join as speaker</button>
+    <button onclick="viewer()">join us guest</button>
+</div>
 
 </body>
 </html>
