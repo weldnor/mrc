@@ -1,0 +1,24 @@
+<html lang="ru">
+<head>
+    <meta charset="utf-8">
+    <link rel="styleSheet" href="style.css" type="text/css" media="screen">
+    <title>mrc</title>
+</head>
+<body>
+
+<h1>Websocket test</h1>
+
+<script>
+    let socket = new WebSocket('ws://' + location.host + '/ws');
+
+    socket.addEventListener('open', function () {
+        socket.send('Hello Server!');
+    });
+
+    socket.addEventListener('message', function (event) {
+        console.log('Message from server ', event.data);
+    });
+</script>
+
+</body>
+</html>
