@@ -1,4 +1,4 @@
-package me.weldnor.mrc;
+package me.weldnor.mrc.pojo;
 
 import com.google.gson.JsonObject;
 import lombok.Data;
