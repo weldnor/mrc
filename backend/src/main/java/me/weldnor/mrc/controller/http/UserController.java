@@ -12,11 +12,8 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController()
-@RequestMapping(
-        path = "api/v1/users",
-        produces = "application/json"
-)
+@RestController
+@RequestMapping("api/v1/users")
 @Slf4j
 public class UserController {
 

@@ -1,6 +1,7 @@
 package me.weldnor.mrc.controller.http;
 
 
+import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.dto.globalrole.GlobalRoleDto;
 import me.weldnor.mrc.exception.globalrole.GlobalRoleNotFoundException;
 import me.weldnor.mrc.exception.user.UserNotFoundException;
@@ -9,11 +10,9 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@RestController()
-@RequestMapping(
-        path = "api/v1/users/{userId}/global-roles",
-        produces = "application/json"
-)
+@RestController
+@RequestMapping("api/v1/{userId}/global-roles")
+@Slf4j
 public class UserGlobalRoleController {
 
     private final UserGlobalRoleService userGlobalRoleService;
