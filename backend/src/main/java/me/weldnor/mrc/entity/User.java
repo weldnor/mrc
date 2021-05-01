@@ -8,7 +8,7 @@ import java.util.HashSet;
 import java.util.Set;
 
 @Entity
-@Table(name = "users")
+@Table(name = "person")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -16,26 +16,27 @@ import java.util.Set;
 public class User {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "person_id")
     private Long userId;
-
-    @Column(unique = true, nullable = false)
-    private String login;
 
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
-    private LocalDate registrationDate = LocalDate.now();
+    private String name;
+
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private UserPassword password;
 
+    @Column(nullable = false)
+    private LocalDate registrationDate = LocalDate.now();
+
     @ManyToMany
     @JoinTable(
-            name = "user_global_roles",
-            joinColumns = @JoinColumn(name = "user_id"),
+            name = "person_global_role",
+            joinColumns = @JoinColumn(name = "person_id"),
             inverseJoinColumns = @JoinColumn(name = "global_role_id"))
     @EqualsAndHashCode.Exclude
     @ToString.Exclude

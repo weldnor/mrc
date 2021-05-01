@@ -13,12 +13,13 @@ import javax.persistence.*;
 public class UserPassword {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "person_password_id")
     private Long userPasswordId;
 
     private String passwordHash;
 
     @OneToOne(cascade = CascadeType.ALL)
-    @JoinColumn
+    @JoinColumn(name = "person_id")
     @EqualsAndHashCode.Exclude
     @ToString.Exclude
     private User user;
