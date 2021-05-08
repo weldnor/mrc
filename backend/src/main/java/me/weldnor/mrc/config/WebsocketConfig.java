@@ -1,24 +1,26 @@
 package me.weldnor.mrc.config;
 
+import me.weldnor.mrc.controller.ws.MyWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.messaging.simp.config.MessageBrokerRegistry;
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
+import org.springframework.web.socket.config.annotation.EnableWebSocket;
+import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
+import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
 
 @Configuration
-@EnableWebSocketMessageBroker
-public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
-    @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) {
-        registry.addEndpoint("/ws")
-                .setAllowedOrigins("http://localhost:8080")
-                .withSockJS();
+@EnableWebSocket
+public class WebsocketConfig implements WebSocketConfigurer {
+
+    private final MyWebSocketHandler myWebSocketHandler;
+
+    public WebsocketConfig(MyWebSocketHandler myWebSocketHandler) {
+        this.myWebSocketHandler = myWebSocketHandler;
     }
 
+
     @Override
-    public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/queue/", "/topic/");
-        registry.setApplicationDestinationPrefixes("/app");
+    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
+        registry
+                .addHandler(myWebSocketHandler, "/ws")
+                .setAllowedOrigins("http://localhost:4200"); //TODO fixme
     }
 }
