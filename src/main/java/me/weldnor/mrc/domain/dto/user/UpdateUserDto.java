@@ -1,4 +1,4 @@
-package me.weldnor.mrc.dto.user;
+package me.weldnor.mrc.domain.dto.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

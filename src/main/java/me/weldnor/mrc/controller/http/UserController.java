@@ -2,10 +2,10 @@ package me.weldnor.mrc.controller.http;
 
 
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.dto.login.LoginRequestDto;
-import me.weldnor.mrc.dto.password.UpdatePasswordDto;
-import me.weldnor.mrc.dto.user.NewUserDto;
-import me.weldnor.mrc.dto.user.UserDto;
+import me.weldnor.mrc.domain.dto.login.LoginRequestDto;
+import me.weldnor.mrc.domain.dto.password.UpdatePasswordDto;
+import me.weldnor.mrc.domain.dto.user.NewUserDto;
+import me.weldnor.mrc.domain.dto.user.UserDto;
 import me.weldnor.mrc.exception.user.UserNotFoundException;
 import me.weldnor.mrc.service.UserService;
 import org.springframework.web.bind.annotation.*;

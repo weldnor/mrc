@@ -1,9 +1,9 @@
 package me.weldnor.mrc.controller.http;
 
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.dto.globalrole.GlobalRoleDto;
-import me.weldnor.mrc.dto.globalrole.NewGlobalRoleDto;
-import me.weldnor.mrc.dto.globalrole.UpdateGlobalRoleDto;
+import me.weldnor.mrc.domain.dto.globalrole.GlobalRoleDto;
+import me.weldnor.mrc.domain.dto.globalrole.NewGlobalRoleDto;
+import me.weldnor.mrc.domain.dto.globalrole.UpdateGlobalRoleDto;
 import me.weldnor.mrc.exception.globalrole.GlobalRoleNotFoundException;
 import me.weldnor.mrc.service.GlobalRoleService;
 import org.springframework.web.bind.annotation.*;

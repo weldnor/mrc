@@ -1,4 +1,4 @@
-package me.weldnor.mrc.dto.user;
+package me.weldnor.mrc.domain.dto.globalrole;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,8 +9,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class NewUserDto {
+public class UpdateGlobalRoleDto {
     private String name;
-    private String email;
-    private String password;
 }

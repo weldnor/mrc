@@ -1,4 +1,4 @@
-package me.weldnor.mrc.dto.globalrole;
+package me.weldnor.mrc.domain.dto.room;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class UpdateGlobalRoleDto {
+public class NewRoomDto {
+    private long creatorId;
+
     private String name;
 }

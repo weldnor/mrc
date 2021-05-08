@@ -1,4 +1,4 @@
-package me.weldnor.mrc.entity;
+package me.weldnor.mrc.domain.entity;
 
 import lombok.*;
 

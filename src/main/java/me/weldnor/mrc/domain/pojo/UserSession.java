@@ -1,4 +1,4 @@
-package me.weldnor.mrc.pojo;
+package me.weldnor.mrc.domain.pojo;
 
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

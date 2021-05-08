@@ -1,10 +1,10 @@
 package me.weldnor.mrc.mapper;
 
 
-import me.weldnor.mrc.dto.user.NewUserDto;
-import me.weldnor.mrc.dto.user.UpdateUserDto;
-import me.weldnor.mrc.dto.user.UserDto;
-import me.weldnor.mrc.entity.User;
+import me.weldnor.mrc.domain.dto.user.NewUserDto;
+import me.weldnor.mrc.domain.dto.user.UpdateUserDto;
+import me.weldnor.mrc.domain.dto.user.UserDto;
+import me.weldnor.mrc.domain.entity.User;
 import org.mapstruct.*;
 
 import java.util.List;

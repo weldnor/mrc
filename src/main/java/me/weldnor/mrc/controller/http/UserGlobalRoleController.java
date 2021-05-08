@@ -2,7 +2,7 @@ package me.weldnor.mrc.controller.http;
 
 
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.dto.globalrole.GlobalRoleDto;
+import me.weldnor.mrc.domain.dto.globalrole.GlobalRoleDto;
 import me.weldnor.mrc.exception.globalrole.GlobalRoleNotFoundException;
 import me.weldnor.mrc.exception.user.UserNotFoundException;
 import me.weldnor.mrc.service.UserGlobalRoleService;

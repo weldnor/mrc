@@ -1,4 +1,4 @@
-package me.weldnor.mrc.dto.room;
+package me.weldnor.mrc.domain.dto.user;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,10 +9,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 @Builder
-public class RoomDto {
-    private long roomId;
-
-    private long creatorId;
-
+public class UserDto {
+    private Long userId;
     private String name;
+    private String email;
 }

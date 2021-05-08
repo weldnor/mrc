@@ -1,7 +1,7 @@
 package me.weldnor.mrc.repository;
 
 
-import me.weldnor.mrc.entity.GlobalRole;
+import me.weldnor.mrc.domain.entity.GlobalRole;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.Optional;

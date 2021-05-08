@@ -1,9 +1,9 @@
 package me.weldnor.mrc.controller.http;
 
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.dto.room.NewRoomDto;
-import me.weldnor.mrc.dto.room.RoomDto;
-import me.weldnor.mrc.dto.room.UpdateRoomDto;
+import me.weldnor.mrc.domain.dto.room.NewRoomDto;
+import me.weldnor.mrc.domain.dto.room.RoomDto;
+import me.weldnor.mrc.domain.dto.room.UpdateRoomDto;
 import me.weldnor.mrc.exception.room.RoomNotFoundException;
 import me.weldnor.mrc.service.RoomService;
 import org.springframework.web.bind.annotation.*;
