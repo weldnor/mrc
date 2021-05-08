@@ -12,7 +12,6 @@ jobs:
         with:
           java-version: 15
       - name: run tests
-        working-directory: ./backend
         run: mvn -B test --file pom.xml
 
 
@@ -25,7 +24,6 @@ jobs:
         with:
           java-version: 15
       - name: run checkstyle
-        working-directory: ./backend
         run: mvn -B checkstyle:check --file pom.xml
 
 
@@ -38,5 +36,4 @@ jobs:
         with:
           java-version: 15
       - name: run spotbugs
-        working-directory: ./backend
         run: mvn -B spotbugs:check --file pom.xml
