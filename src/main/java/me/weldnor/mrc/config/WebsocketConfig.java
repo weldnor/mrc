@@ -21,6 +21,6 @@ public class WebsocketConfig implements WebSocketConfigurer {
     public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
         registry
                 .addHandler(myWebSocketHandler, "/ws")
-                .setAllowedOrigins("http://localhost:4200"); //TODO fixme
+                .setAllowedOriginPatterns("*"); //TODO fixme
     }
 }
