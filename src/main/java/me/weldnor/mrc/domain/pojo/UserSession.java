@@ -172,6 +172,7 @@ public class UserSession implements Closeable {
      * удаление сессии пользователя.
      */
     @Override
+    @SneakyThrows
     public void close() {
         log.info("PARTICIPANT {}: Releasing resources", this.getUserId());
 
@@ -208,6 +209,8 @@ public class UserSession implements Closeable {
                 log.warn("USER {}: Could not release outgoing EP", UserSession.this.userId);
             }
         });
+
+        webSocketSession.close();
     }
 
     /**

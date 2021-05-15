@@ -81,8 +81,8 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("afterConnectionClosed");
-        var userOptional = userSessionService.getSessionByWs(session);
-        userOptional.ifPresent(userSessionService::closeSession);
+        userSessionService.getSessionByWs(session)
+                .ifPresent(this::leaveRoom);
     }
 
     private void joinRoom(WebSocketSession session, long userId, long roomId) {
@@ -91,14 +91,15 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
 
         UserSession user = new UserSession(userId, roomId, session, pipeline);
 
-        notifyThatUserJoinToRoom(user, roomId);
+        notifyThatUserJoinToRoom(user);
         sendParticipantIds(user);
 
         userSessionService.addSession(user);
     }
 
-    private void notifyThatUserJoinToRoom(UserSession user, long roomId) {
+    private void notifyThatUserJoinToRoom(UserSession user) {
         var userId = user.getUserId();
+        var roomId = user.getRoomId();
         ObjectNode newParticipantMsg = objectMapper.createObjectNode();
         newParticipantMsg.put("id", "newParticipantArrived");
         newParticipantMsg.put("userId", user.getUserId());
@@ -109,6 +110,25 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
 
         for (var participant : participants) {
             participant.sendMessage(newParticipantMsg);
+        }
+    }
+
+    private void notifyThatUserLeaveRoom(UserSession user) {
+        var userId = user.getUserId();
+        var roomId = user.getRoomId();
+
+        ObjectNode newParticipantMsg = objectMapper.createObjectNode();
+        newParticipantMsg.put("id", "participantLeft");
+        newParticipantMsg.put("userId", user.getUserId());
+
+        var participants = userSessionService.getSessionsByRoomId(roomId);
+        log.info("ROOM {}: notifying other participants of left participant {}", roomId,
+                userId);
+
+        for (var participant : participants) {
+            if (!participant.equals(user)) {
+                participant.sendMessage(newParticipantMsg);
+            }
         }
     }
 
@@ -137,7 +157,8 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
     private void leaveRoom(UserSession user) {
         log.info("leaveRoom");
         log.info("PARTICIPANT {}: Leaving room {}", user.getUserId(), user.getRoomId());
-        user.close();
+        notifyThatUserLeaveRoom(user);
+        userSessionService.closeSession(user);
     }
 
     @Scheduled(fixedDelay = 15000)

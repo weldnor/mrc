@@ -1,6 +1,5 @@
 package me.weldnor.mrc.service;
 
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.pojo.UserSession;
 import org.springframework.stereotype.Service;
@@ -42,23 +41,13 @@ public class UserSessionService {
         sessions.add(userSession);
     }
 
-    @SneakyThrows
-    public void closeSession(long userId) {
-        var session = getSessionByUserId(userId).orElseThrow();
-        sendDebugMessage(session.getWebSocketSession(), "leaving form server...");
-        session.getWebSocketSession().close();
-        sessions.remove(session);
-    }
-
-    @SneakyThrows
     public void closeSession(UserSession session) {
         try {
             sendDebugMessage(session.getWebSocketSession(), "leaving form server...");
         } catch (IllegalStateException exception) {
             // ignore
         }
-
-        session.getWebSocketSession().close();
+        session.close();
         sessions.remove(session);
     }
 }
