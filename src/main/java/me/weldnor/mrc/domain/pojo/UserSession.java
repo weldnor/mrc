@@ -1,9 +1,14 @@
 package me.weldnor.mrc.domain.pojo;
 
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.gson.JsonObject;
 import lombok.Getter;
 import lombok.Setter;
+import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
+import me.weldnor.mrc.utils.WebSocketUtils;
 import org.kurento.client.Continuation;
 import org.kurento.client.IceCandidate;
 import org.kurento.client.MediaPipeline;
@@ -28,24 +33,105 @@ public class UserSession implements Closeable {
 
     private final MediaPipeline pipeline;
 
-    private final WebRtcEndpoint outgoingMedia;
+    private final WebRtcEndpoint outgoingFullMedia;
     private final ConcurrentMap<Long, WebRtcEndpoint> incomingMedia = new ConcurrentHashMap<>();
 
-    public UserSession(
-            final long userId, long roomId, final WebSocketSession webSocketSession,
-            MediaPipeline pipeline
-    ) {
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
+    public UserSession(final long userId, long roomId, final WebSocketSession webSocketSession, MediaPipeline pipeline) {
         this.pipeline = pipeline;
         this.userId = userId;
         this.roomId = roomId;
         this.webSocketSession = webSocketSession;
-        this.outgoingMedia = new WebRtcEndpoint.Builder(pipeline).build();
-        this.outgoingMedia.addIceCandidateFoundListener(event -> {
+
+        this.outgoingFullMedia = new WebRtcEndpoint.Builder(pipeline).build();
+        this.outgoingFullMedia.addIceCandidateFoundListener(event -> iceCandidateFound(event.getCandidate()));
+    }
+
+    /**
+     * @param candidate IceCandidate текущего пользователя
+     */
+    @SneakyThrows
+    private void iceCandidateFound(IceCandidate candidate) {
+        ObjectNode response = objectMapper.createObjectNode();
+        response.put("id", "iceCandidate");
+        response.put("userId", userId);
+        response.set("candidate", objectMapper.valueToTree(candidate));
+
+        synchronized (webSocketSession) {
+            this.sendMessage(response);
+        }
+    }
+
+    /**
+     * @param sender   - сессия пользователя,видео которого мы хотим получить
+     * @param sdpOffer - передаваемый sdpOffer текущего пользователя
+     */
+    public void receiveVideoFrom(UserSession sender, String sdpOffer) {
+        long senderId = sender.getUserId();
+        log.info("USER {}: connecting with {} in room {}", this.userId, senderId, this.roomId);
+        log.info("USER {}: SdpOffer for {}", this.userId, senderId);
+
+        final String ipSdpAnswer = this.getEndpointForUser(sender).processOffer(sdpOffer);
+        final ObjectNode scParams = objectMapper.createObjectNode();
+        scParams.put("id", "receiveVideoAnswer");
+        scParams.put("userId", senderId);
+        scParams.put("sdpAnswer", ipSdpAnswer);
+
+        log.info("USER {}: SdpAnswer for {} is {}", this.userId, senderId, ipSdpAnswer);
+        this.sendMessage(scParams);
+        log.info("gather candidates");
+        this.getEndpointForUser(sender).gatherCandidates();
+    }
+
+    /**
+     * Получение или создание WebRtcEndpoint для получения видео пользователя.
+     *
+     * @param sender сессия пользователя
+     * @return WebRtcEndpoint для подключения к пользователю
+     */
+    private WebRtcEndpoint getEndpointForUser(final UserSession sender) {
+        long senderId = sender.getUserId();
+
+        if (senderId == this.userId) {
+            log.info("PARTICIPANT {}: configuring loopback", this.getUserId());
+            return outgoingFullMedia;
+        }
+
+        log.info("PARTICIPANT {}: receiving video from {}", this.getUserId(), senderId);
+
+        WebRtcEndpoint incoming = incomingMedia.get(senderId);
+
+        if (incoming == null) {
+            incoming = createEndpointForUser(sender);
+        }
+
+        log.info("PARTICIPANT {}: obtained endpoint for {}", this.getUserId(), senderId);
+        sender.getOutgoingFullMedia().connect(incoming);
+        return incoming;
+    }
+
+    /**
+     * Создание  создание WebRtcEndpoint для получения видео пользователя.
+     *
+     * @param sender сессия пользователя, с которым надо создать соединение
+     * @return WebRtcEndpoint для подключения к пользователю
+     */
+    private WebRtcEndpoint createEndpointForUser(UserSession sender) {
+        long senderId = sender.getUserId();
+        log.info("PARTICIPANT {}: creating new endpoint for {}", this.getUserId(), senderId);
+
+        var incoming = new WebRtcEndpoint.Builder(pipeline).build();
+
+        incoming.addIceCandidateFoundListener(event -> {
             JsonObject response = new JsonObject();
             response.addProperty("id", "iceCandidate");
-            response.addProperty("userId", userId);
+            response.addProperty("userId", senderId);
             response.add("candidate", JsonUtils.toJsonObject(event.getCandidate()));
+
+            log.info("addIceCandidateFoundListener");
+            log.info(response.toString());
+
             try {
                 synchronized (webSocketSession) {
                     webSocketSession.sendMessage(new TextMessage(response.toString()));
@@ -54,98 +140,47 @@ public class UserSession implements Closeable {
                 log.info(e.getMessage());
             }
         });
-    }
-
-    public void receiveVideoFrom(UserSession sender, String sdpOffer) throws IOException {
-        log.info("USER {}: connecting with {} in room {}", this.userId, sender.getUserId(), this.roomId);
-
-        log.info("USER {}: SdpOffer for {}", this.userId, sender.getUserId());
-
-        final String ipSdpAnswer = this.getEndpointForUser(sender).processOffer(sdpOffer);
-        final JsonObject scParams = new JsonObject();
-        scParams.addProperty("id", "receiveVideoAnswer");
-        scParams.addProperty("userId", sender.getUserId());
-        scParams.addProperty("sdpAnswer", ipSdpAnswer);
-
-        log.info("USER {}: SdpAnswer for {} is {}", this.getUserId(), sender.getUserId(), ipSdpAnswer);
-        this.sendMessage(scParams);
-        log.info("gather candidates");
-        this.getEndpointForUser(sender).gatherCandidates();
-    }
-
-    private WebRtcEndpoint getEndpointForUser(final UserSession sender) {
-        if (sender.getUserId() == userId) {
-            log.info("PARTICIPANT {}: configuring loopback", this.getUserId());
-            return outgoingMedia;
-        }
-
-        log.info("PARTICIPANT {}: receiving video from {}", this.getUserId(), sender.getUserId());
-
-        WebRtcEndpoint incoming = incomingMedia.get(sender.getUserId());
-        if (incoming == null) {
-            log.info("PARTICIPANT {}: creating new endpoint for {}", this.getUserId(), sender.getUserId());
-            incoming = new WebRtcEndpoint.Builder(pipeline).build();
-
-            incoming.addIceCandidateFoundListener(event -> {
-                JsonObject response = new JsonObject();
-                response.addProperty("id", "iceCandidate");
-                response.addProperty("userId", sender.getUserId());
-                response.add("candidate", JsonUtils.toJsonObject(event.getCandidate()));
-
-                log.info("addIceCandidateFoundListener");
-                log.info(response.toString());
-
-                try {
-                    synchronized (webSocketSession) {
-                        webSocketSession.sendMessage(new TextMessage(response.toString()));
-                    }
-                } catch (IOException e) {
-                    log.info(e.getMessage());
-                }
-            });
-
-            incomingMedia.put(sender.getUserId(), incoming);
-        }
-
-        log.info("PARTICIPANT {}: obtained endpoint for {}", this.getUserId(), sender.getUserId());
-        sender.getOutgoingMedia().connect(incoming);
-
+        incomingMedia.put(senderId, incoming);
         return incoming;
     }
 
-    public void cancelVideoFrom(final UserSession sender) {
-        this.cancelVideoFrom(sender.getUserId());
-    }
 
+    /**
+     * @param senderId - id пользователя, с которым надо закрыть соединение
+     */
     public void cancelVideoFrom(long senderId) {
         log.info("PARTICIPANT {}: canceling video reception from {}", this.getUserId(), senderId);
         final WebRtcEndpoint incoming = incomingMedia.remove(senderId);
 
         log.info("PARTICIPANT {}: removing endpoint for {}", this.getUserId(), senderId);
-        incoming.release(new Continuation<Void>() {
+        incoming.release(new Continuation<>() {
             @Override
-            public void onSuccess(Void result) throws Exception {
+            public void onSuccess(Void result) {
                 log.info("PARTICIPANT {}: Released successfully incoming EP for {}",
                         UserSession.this.getUserId(), senderId);
             }
 
             @Override
-            public void onError(Throwable cause) throws Exception {
+            public void onError(Throwable cause) {
                 log.warn("PARTICIPANT {}: Could not release incoming EP for {}", UserSession.this.userId,
                         senderId);
             }
         });
     }
 
+    /**
+     * удаление сессии пользователя.
+     */
     @Override
-    public void close() throws IOException {
+    public void close() {
         log.info("PARTICIPANT {}: Releasing resources", this.getUserId());
-        for (final Long remoteParticipantId : incomingMedia.keySet()) {
 
+        for (final Long remoteParticipantId : incomingMedia.keySet()) {
             log.info("PARTICIPANT {}: Released incoming EP for {}", this.userId, remoteParticipantId);
 
             final WebRtcEndpoint ep = this.incomingMedia.get(remoteParticipantId);
 
+            // TODO delete?
             ep.release(new Continuation<>() {
 
                 @Override
@@ -162,7 +197,7 @@ public class UserSession implements Closeable {
             });
         }
 
-        outgoingMedia.release(new Continuation<>() {
+        outgoingFullMedia.release(new Continuation<>() {
             @Override
             public void onSuccess(Void result) {
                 log.info("PARTICIPANT {}: Released outgoing EP", UserSession.this.userId);
@@ -175,37 +210,69 @@ public class UserSession implements Closeable {
         });
     }
 
-    public void sendMessage(JsonObject message) throws IOException {
-        log.info("USER {}: Sending message with id: {}", userId, message.get("id").getAsString());
-        synchronized (webSocketSession) {
-            webSocketSession.sendMessage(new TextMessage(message.toString()));
-        }
-    }
-
-    public void addCandidate(IceCandidate candidate, long userId) {
-        if (this.userId == userId) {
-            outgoingMedia.addIceCandidate(candidate);
+    /**
+     * Добавление IceCandidate для подключения пользователя к своим Endpoint.
+     *
+     * @param candidate - IceCandidate
+     * @param senderId  - id пользователя
+     */
+    public void addCandidate(IceCandidate candidate, long senderId) {
+        if (this.userId == senderId) {
+            outgoingFullMedia.addIceCandidate(candidate);
         } else {
-            WebRtcEndpoint webRtc = incomingMedia.get(userId);
+            WebRtcEndpoint webRtc = incomingMedia.get(senderId);
             if (webRtc != null) {
                 webRtc.addIceCandidate(candidate);
             }
         }
     }
 
+    /**
+     * @param message - отправляемое пользователю сообщение
+     */
+    public void sendDebugMessage(String message) {
+        log.debug("USER {}: Sending debug message: {}", userId, message);
+        synchronized (webSocketSession) {
+            WebSocketUtils.sendDebugMessage(webSocketSession, message);
+        }
+    }
+
+    /**
+     * @param message - отправляемое пользователю сообщение
+     */
+    public void sendMessage(JsonNode message) {
+        log.debug("USER {}: Sending message with id: {}", userId, message.get("id").asText());
+        synchronized (webSocketSession) {
+            WebSocketUtils.sendMessage(webSocketSession, message);
+        }
+    }
+
+    /**
+     * @param message - отправляемое пользователю сообщение
+     */
+    public void sendMessage(String message) {
+        log.debug("USER {}: Sending message {}", userId, message);
+        synchronized (webSocketSession) {
+            WebSocketUtils.sendMessage(webSocketSession, message);
+        }
+    }
 
     @Override
     public String toString() {
-        return "UserSession{" +
-                "userId=" + userId +
-                ", roomId=" + roomId +
-                '}';
+        return "UserSession{"
+                + "userId=" + userId
+                + ", roomId=" + roomId
+                + '}';
     }
 
     @Override
     public boolean equals(Object o) {
-        if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
+        if (this == o) {
+            return true;
+        }
+        if (o == null || getClass() != o.getClass()) {
+            return false;
+        }
         UserSession that = (UserSession) o;
         return userId == that.userId;
     }

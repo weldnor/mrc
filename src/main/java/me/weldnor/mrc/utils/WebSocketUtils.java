@@ -1,26 +1,38 @@
 package me.weldnor.mrc.utils;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.fasterxml.jackson.databind.node.TextNode;
-import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
-@Slf4j
-public class WebSocketUtils {
-    private static final ObjectMapper objectMapper = new ObjectMapper();
+import java.io.IOException;
 
-    @SneakyThrows
-    public static void sendMessage(WebSocketSession session, String message) {
-        log.info("sending message: " + message);
-        session.sendMessage(new TextMessage(message));
+@Slf4j
+public final class WebSocketUtils {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private WebSocketUtils() {
     }
 
-    @SneakyThrows
+    public static void sendMessage(WebSocketSession session, String message) {
+        log.info(message);
+        try {
+            session.sendMessage(new TextMessage(message));
+        } catch (IOException e) {
+            log.warn("cant send message, because socket is closed");
+        }
+    }
+
+    public static void sendMessage(WebSocketSession session, JsonNode message) {
+        sendMessage(session, message.toPrettyString());
+    }
+
     public static void sendDebugMessage(WebSocketSession session, String message) {
-        ObjectNode jsonNode = objectMapper.createObjectNode();
+        ObjectNode jsonNode = OBJECT_MAPPER.createObjectNode();
         jsonNode.set("type", new TextNode("debug"));
         jsonNode.set("text", new TextNode(message));
         sendMessage(session, jsonNode.toPrettyString());

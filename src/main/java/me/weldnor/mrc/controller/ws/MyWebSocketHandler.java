@@ -1,9 +1,9 @@
 package me.weldnor.mrc.controller.ws;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.pojo.UserSession;
@@ -18,45 +18,46 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.io.IOException;
-
 @Component
 @Slf4j
 public class MyWebSocketHandler extends TextWebSocketHandler {
 
-    private static final Gson gson = new GsonBuilder().create();
-
+    private final MediaPipeline pipeline;
 
     private final UserSessionService userSessionService;
 
-    private final MediaPipeline pipeline;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public MyWebSocketHandler(UserSessionService userSessionService, KurentoClient kurentoClient) {
         this.userSessionService = userSessionService;
         this.pipeline = kurentoClient.createMediaPipeline();
     }
 
+
     @Override
-    public void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
-        final JsonObject jsonMessage = gson.fromJson(message.getPayload(), JsonObject.class);
+    @SneakyThrows
+    public void handleTextMessage(WebSocketSession session, TextMessage message) {
+        final JsonNode parsedMessage = objectMapper.readTree(message.getPayload());
 
         final UserSession user = userSessionService.getSessionByWs(session).orElse(null);
 
         if (user != null) {
-            log.info("Incoming message from user '{} id: {}'", user.getUserId(), jsonMessage.get("id").getAsString());
+            log.info("Incoming message from user '{} id: {}'", user.getUserId(), parsedMessage.get("id").asText());
         } else {
-            log.info("Incoming message from new user id: {} id: ", jsonMessage.get("id").getAsString());
+            log.info("Incoming message from new user id: {} id: ", parsedMessage.get("id").asText());
         }
 
-        switch (jsonMessage.get("id").getAsString()) {
+        switch (parsedMessage.get("id").asText()) {
             case "joinRoom":
-                joinRoom(jsonMessage, session);
+                long userId = parsedMessage.get("userId").asLong();
+                final long roomId = parsedMessage.get("roomId").asLong();
+                joinRoom(session, userId, roomId);
                 break;
             case "receiveVideoFrom":
-                final long userId = jsonMessage.get("sender").getAsLong();
+                userId = parsedMessage.get("userId").asLong();
                 final UserSession sender = userSessionService.getSessionByUserId(userId)
                         .orElseThrow();
-                final String sdpOffer = jsonMessage.get("sdpOffer").getAsString();
+                final String sdpOffer = parsedMessage.get("sdpOffer").asText();
                 assert user != null;
                 user.receiveVideoFrom(sender, sdpOffer);
                 break;
@@ -65,11 +66,11 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
                 leaveRoom(user);
                 break;
             case "onIceCandidate":
-                JsonObject candidate = jsonMessage.get("candidate").getAsJsonObject();
+                JsonNode candidate = parsedMessage.get("candidate");
                 if (user != null) {
-                    IceCandidate cand = new IceCandidate(candidate.get("candidate").getAsString(),
-                            candidate.get("sdpMid").getAsString(), candidate.get("sdpMLineIndex").getAsInt());
-                    user.addCandidate(cand, jsonMessage.get("userId").getAsLong());
+                    IceCandidate cand = new IceCandidate(candidate.get("candidate").asText(),
+                            candidate.get("sdpMid").asText(), candidate.get("sdpMLineIndex").asInt());
+                    user.addCandidate(cand, parsedMessage.get("userId").asLong());
                 }
                 break;
             default:
@@ -84,60 +85,62 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
         userOptional.ifPresent(userSessionService::closeSession);
     }
 
-    private void joinRoom(JsonObject params, WebSocketSession session) {
+    private void joinRoom(WebSocketSession session, long userId, long roomId) {
         log.info("joinRoom");
-        final long roomId = params.get("roomId").getAsLong();
-        final long userId = params.get("userId").getAsLong();
         log.info("PARTICIPANT {}: trying to join room {}", userId, roomId);
 
         UserSession user = new UserSession(userId, roomId, session, pipeline);
-        //
-        JsonObject newParticipantMsg = new JsonObject();
-        newParticipantMsg.addProperty("id", "newParticipantArrived");
-        newParticipantMsg.addProperty("userId", user.getUserId());
+
+        notifyThatUserJoinToRoom(user, roomId);
+        sendParticipantIds(user);
+
+        userSessionService.addSession(user);
+    }
+
+    private void notifyThatUserJoinToRoom(UserSession user, long roomId) {
+        var userId = user.getUserId();
+        ObjectNode newParticipantMsg = objectMapper.createObjectNode();
+        newParticipantMsg.put("id", "newParticipantArrived");
+        newParticipantMsg.put("userId", user.getUserId());
 
         var participants = userSessionService.getSessionsByRoomId(roomId);
         log.info("ROOM {}: notifying other participants of new participant {}", roomId,
                 userId);
 
         for (var participant : participants) {
-            try {
-                participant.sendMessage(newParticipantMsg);
-            } catch (final IOException e) {
-                log.info("ROOM {}: participant {} could not be notified", roomId, participant.getUserId(), e);
-            }
+            participant.sendMessage(newParticipantMsg);
         }
-        //
-        sendParticipantIds(user);
-        userSessionService.addSession(user);
     }
 
     @SneakyThrows
     private void sendParticipantIds(UserSession session) {
         log.info("sendParticipantIds");
         var participants = userSessionService.getSessionsByRoomId(session.getRoomId());
-        final JsonArray participantsArray = new JsonArray();
+
+        ArrayNode participantsArray = objectMapper.createArrayNode();
         for (var participant : participants) {
             if (participant.getUserId() != session.getUserId()) {
                 participantsArray.add(participant.getUserId());
             }
         }
 
-        final JsonObject existingParticipantsMsg = new JsonObject();
-        existingParticipantsMsg.addProperty("id", "existingParticipants");
-        existingParticipantsMsg.add("data", participantsArray);
+        ObjectNode existingParticipantsMsg = objectMapper.createObjectNode();
+        existingParticipantsMsg.put("id", "existingParticipants");
+        existingParticipantsMsg.set("data", participantsArray);
+
         log.info("PARTICIPANT {}: sending a list of {} participants", session.getUserId(),
                 participantsArray.size());
+
         session.sendMessage(existingParticipantsMsg);
     }
 
-    private void leaveRoom(UserSession user) throws IOException {
+    private void leaveRoom(UserSession user) {
         log.info("leaveRoom");
         log.info("PARTICIPANT {}: Leaving room {}", user.getUserId(), user.getRoomId());
         user.close();
     }
 
-    @Scheduled(fixedDelay = 10000)
+    @Scheduled(fixedDelay = 15000)
     public void statistic() {
         var users = userSessionService.getAllSessions();
         log.info("active sessions: {}", users);
