@@ -51,7 +51,7 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
             case "joinRoom":
                 long userId = parsedMessage.get("userId").asLong();
                 final long roomId = parsedMessage.get("roomId").asLong();
-                joinRoom(session, userId, roomId);
+                onJoinRoom(session, userId, roomId);
                 break;
             case "receiveVideoFrom":
                 userId = parsedMessage.get("userId").asLong();
@@ -63,7 +63,7 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
                 break;
             case "leaveRoom":
                 assert user != null;
-                leaveRoom(user);
+                onLeaveRoom(user);
                 break;
             case "onIceCandidate":
                 JsonNode candidate = parsedMessage.get("candidate");
@@ -73,19 +73,29 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
                     user.addCandidate(cand, parsedMessage.get("userId").asLong());
                 }
                 break;
+            case "ping":
+                assert user != null;
+                onPing(user);
+                break;
             default:
                 break;
         }
+    }
+
+    private void onPing(UserSession user) {
+        var json = objectMapper.createObjectNode();
+        json.put("id", "pong");
+        user.sendMessage(json);
     }
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("afterConnectionClosed");
         userSessionService.getSessionByWs(session)
-                .ifPresent(this::leaveRoom);
+                .ifPresent(this::onLeaveRoom);
     }
 
-    private void joinRoom(WebSocketSession session, long userId, long roomId) {
+    private void onJoinRoom(WebSocketSession session, long userId, long roomId) {
         log.info("joinRoom");
         log.info("PARTICIPANT {}: trying to join room {}", userId, roomId);
 
@@ -154,7 +164,7 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
         session.sendMessage(existingParticipantsMsg);
     }
 
-    private void leaveRoom(UserSession user) {
+    private void onLeaveRoom(UserSession user) {
         log.info("leaveRoom");
         log.info("PARTICIPANT {}: Leaving room {}", user.getUserId(), user.getRoomId());
         notifyThatUserLeaveRoom(user);
