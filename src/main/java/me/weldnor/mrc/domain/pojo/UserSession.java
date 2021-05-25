@@ -47,7 +47,6 @@ public class UserSession implements Closeable {
 
         compressionFilter = new GStreamerFilter.Builder(pipeline, "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1").build();
         outgoingFullMedia.connect(compressionFilter);
-//        compressionFilter.connect(outgoingFullMedia);
     }
 
     /**
@@ -142,12 +141,11 @@ public class UserSession implements Closeable {
         incomingMedia.put(senderId, incoming);
 
         log.info("PARTICIPANT {}: obtained endpoint for {}", this.getUserId(), senderId);
-//        if (full) {
-        sender.getOutgoingFullMedia().connect(incoming);
-//        } else {
-//            sender.getCompressionFilter().connect(incoming);
-//        }
-
+        if (full) {
+            sender.getOutgoingFullMedia().connect(incoming);
+        } else {
+            sender.getCompressionFilter().connect(incoming);
+        }
         return incoming;
     }
 
