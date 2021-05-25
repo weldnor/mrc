@@ -77,16 +77,31 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
                 assert user != null;
                 onPing(user);
                 break;
+            case "acceptFilter":
+                assert user != null;
+                onAcceptFilter(user, parsedMessage.get("targetId").asLong());
+                break;
+            case "declineFilter":
+                assert user != null;
+                onDeclineFilter(user, parsedMessage.get("targetId").asLong());
+                break;
             default:
                 break;
         }
     }
 
-    private void onPing(UserSession user) {
-        var json = objectMapper.createObjectNode();
-        json.put("id", "pong");
-        user.sendMessage(json);
+    private void onAcceptFilter(UserSession user, long targetId) {
+        log.info("onAcceptFilter");
+        var target = userSessionService.getSessionByUserId(targetId).orElseThrow();
+        user.acceptFilterForUser(target);
     }
+
+    private void onDeclineFilter(UserSession user, long targetId) {
+        log.info("onDeclineFilter");
+        var target = userSessionService.getSessionByUserId(targetId).orElseThrow();
+        user.declineFilterForUser(target);
+    }
+
 
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
@@ -169,6 +184,12 @@ public class MyWebSocketHandler extends TextWebSocketHandler {
         log.info("PARTICIPANT {}: Leaving room {}", user.getUserId(), user.getRoomId());
         notifyThatUserLeaveRoom(user);
         userSessionService.closeSession(user);
+    }
+
+    private void onPing(UserSession user) {
+        var json = objectMapper.createObjectNode();
+        json.put("id", "pong");
+        user.sendMessage(json);
     }
 
     @Scheduled(fixedDelay = 15000)

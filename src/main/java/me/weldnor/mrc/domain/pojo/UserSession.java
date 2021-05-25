@@ -9,10 +9,7 @@ import lombok.Setter;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.utils.WebSocketUtils;
-import org.kurento.client.Continuation;
-import org.kurento.client.IceCandidate;
-import org.kurento.client.MediaPipeline;
-import org.kurento.client.WebRtcEndpoint;
+import org.kurento.client.*;
 import org.kurento.jsonrpc.JsonUtils;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
@@ -34,6 +31,7 @@ public class UserSession implements Closeable {
     private final MediaPipeline pipeline;
 
     private final WebRtcEndpoint outgoingFullMedia;
+    private final Filter compressionFilter;
     private final ConcurrentMap<Long, WebRtcEndpoint> incomingMedia = new ConcurrentHashMap<>();
 
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -46,6 +44,10 @@ public class UserSession implements Closeable {
 
         this.outgoingFullMedia = new WebRtcEndpoint.Builder(pipeline).build();
         this.outgoingFullMedia.addIceCandidateFoundListener(event -> iceCandidateFound(event.getCandidate()));
+
+        compressionFilter = new GStreamerFilter.Builder(pipeline, "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1").build();
+        outgoingFullMedia.connect(compressionFilter);
+//        compressionFilter.connect(outgoingFullMedia);
     }
 
     /**
@@ -103,11 +105,8 @@ public class UserSession implements Closeable {
         WebRtcEndpoint incoming = incomingMedia.get(senderId);
 
         if (incoming == null) {
-            incoming = createEndpointForUser(sender);
+            incoming = createEndpointForUser(sender, false);
         }
-
-        log.info("PARTICIPANT {}: obtained endpoint for {}", this.getUserId(), senderId);
-        sender.getOutgoingFullMedia().connect(incoming);
         return incoming;
     }
 
@@ -117,7 +116,7 @@ public class UserSession implements Closeable {
      * @param sender сессия пользователя, с которым надо создать соединение
      * @return WebRtcEndpoint для подключения к пользователю
      */
-    private WebRtcEndpoint createEndpointForUser(UserSession sender) {
+    private WebRtcEndpoint createEndpointForUser(UserSession sender, boolean full) {
         long senderId = sender.getUserId();
         log.info("PARTICIPANT {}: creating new endpoint for {}", this.getUserId(), senderId);
 
@@ -141,9 +140,16 @@ public class UserSession implements Closeable {
             }
         });
         incomingMedia.put(senderId, incoming);
+
+        log.info("PARTICIPANT {}: obtained endpoint for {}", this.getUserId(), senderId);
+//        if (full) {
+        sender.getOutgoingFullMedia().connect(incoming);
+//        } else {
+//            sender.getCompressionFilter().connect(incoming);
+//        }
+
         return incoming;
     }
-
 
     /**
      * @param senderId - id пользователя, с которым надо закрыть соединение
@@ -283,6 +289,20 @@ public class UserSession implements Closeable {
     @Override
     public int hashCode() {
         return Objects.hash(userId);
+    }
+
+    public void acceptFilterForUser(UserSession target) {
+        var endpoint = incomingMedia.get(target.getUserId());
+        target.getOutgoingFullMedia().disconnect(endpoint);
+        target.getCompressionFilter().connect(endpoint);
+//        endpoint.connect(target.compressionFilter);
+        //            sender.getCompressionFilter().connect(incoming);
+    }
+
+    public void declineFilterForUser(UserSession target) {
+        var endpoint = incomingMedia.get(target.getUserId());
+        target.getCompressionFilter().disconnect(endpoint);
+        target.getOutgoingFullMedia().connect(endpoint);
     }
 }
 
