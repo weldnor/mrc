@@ -2,36 +2,31 @@ package me.weldnor.mrc.service;
 
 
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.domain.dto.login.LoginRequestDto;
-import me.weldnor.mrc.domain.dto.password.UpdatePasswordDto;
 import me.weldnor.mrc.domain.dto.user.NewUserDto;
-import me.weldnor.mrc.domain.dto.user.UpdateUserDto;
 import me.weldnor.mrc.domain.dto.user.UserDto;
 import me.weldnor.mrc.domain.entity.User;
-import me.weldnor.mrc.domain.entity.UserPassword;
 import me.weldnor.mrc.exception.user.UserNotFoundException;
 import me.weldnor.mrc.mapper.UserMapper;
-import me.weldnor.mrc.repository.GlobalRoleRepository;
 import me.weldnor.mrc.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.bson.types.ObjectId;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import javax.transaction.Transactional;
 import java.util.List;
-import java.util.Optional;
-import java.util.Set;
 
 @Service
-@Transactional
 @Slf4j
 public class UserService {
 
-    private UserRepository userRepository;
-    private GlobalRoleRepository globalRoleRepository;
-    private UserMapper userMapper;
-    private PasswordEncoder passwordEncoder;
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
 
+    public UserService(UserRepository userRepository, UserMapper userMapper, PasswordEncoder passwordEncoder) {
+        this.userRepository = userRepository;
+        this.userMapper = userMapper;
+        this.passwordEncoder = passwordEncoder;
+    }
 
     public List<UserDto> getAllUsers() {
         var users = userRepository.findAll();
@@ -40,13 +35,8 @@ public class UserService {
 
     public UserDto addUser(NewUserDto dto) {
         User user = userMapper.mapToEntity(dto);
-        UserPassword userPassword = new UserPassword();
 
         String passwordHash = passwordEncoder.encode(dto.getPassword());
-        userPassword.setPasswordHash(passwordHash);
-
-        user.setPassword(userPassword);
-        userPassword.setUser(user);
 
         user = userRepository.save(user);
         return userMapper.mapToDto(user);
@@ -56,89 +46,51 @@ public class UserService {
         userRepository.deleteAll();
     }
 
-    public UserDto getUser(long userId) throws UserNotFoundException {
-        User user = findUserById(userId);
+    public UserDto getUser(ObjectId id) throws UserNotFoundException {
+        User user = findUserById(id);
         return userMapper.mapToDto(user);
     }
 
-    public void updateUser(long userId, UpdateUserDto updateUserDto) throws UserNotFoundException {
-        User user = findUserById(userId);
-        userMapper.updateEntity(user, updateUserDto);
+    public void deleteUser(ObjectId id) {
+        userRepository.deleteById(id);
     }
 
-    public void deleteUser(long userId) {
-        userRepository.deleteById(userId);
-    }
+//    public Optional<UserDto> login(LoginRequestDto loginRequestDto) {
+//        String email = loginRequestDto.getEmail();
+//        String password = loginRequestDto.getPassword();
+//
+//        var userOptional = userRepository.findByEmail(email);
+//
+//        if (userOptional.isEmpty()) {
+//            return Optional.empty();
+//        }
+//
+//        User user = userOptional.get();
+//
+//        String hash = user.getPassword();
+//
+//        if (passwordEncoder.matches(password, hash)) {
+//            UserDto dto = userMapper.mapToDto(user);
+//            return Optional.of(dto);
+//        }
+//        return Optional.empty();
+//    }
+//
+//    public UserDto register(NewUserDto newUserDto) {
+//        UserDto userDto = addUser(newUserDto);
+//        User user = userRepository.findById(userDto.getUserId())
+//                .orElseThrow(IllegalStateException::new);
+//
+//        var userRole = globalRoleRepository
+//                .findByName("USER")
+//                .orElseThrow(IllegalStateException::new);
+//
+//        user.setGlobalRoles(Set.of(userRole));
+//        return userMapper.mapToDto(user);
+//    }
 
-    public boolean updateUserPassword(long userId, UpdatePasswordDto updatePasswordDto) throws UserNotFoundException {
-        String oldPassword = updatePasswordDto.getOldPassword();
-        String newPassword = updatePasswordDto.getNewPassword();
-        User user = findUserById(userId);
-
-        if (passwordEncoder.matches(oldPassword, user.getPassword().getPasswordHash())) {
-            String newPasswordHash = passwordEncoder.encode(newPassword);
-            user.getPassword().setPasswordHash(newPasswordHash);
-            return true;
-        }
-        return false;
-    }
-
-    public Optional<UserDto> login(LoginRequestDto loginRequestDto) {
-        String email = loginRequestDto.getEmail();
-        String password = loginRequestDto.getPassword();
-
-        var userOptional = userRepository.findByEmail(email);
-
-        if (userOptional.isEmpty()) {
-            return Optional.empty();
-        }
-
-        User user = userOptional.get();
-
-        String hash = user.getPassword().getPasswordHash();
-
-        if (passwordEncoder.matches(password, hash)) {
-            UserDto dto = userMapper.mapToDto(user);
-            return Optional.of(dto);
-        }
-        return Optional.empty();
-    }
-
-    public UserDto register(NewUserDto newUserDto) {
-        UserDto userDto = addUser(newUserDto);
-        User user = userRepository.findById(userDto.getUserId())
-                .orElseThrow(IllegalStateException::new);
-
-        var userRole = globalRoleRepository
-                .findByName("USER")
-                .orElseThrow(IllegalStateException::new);
-
-        user.setGlobalRoles(Set.of(userRole));
-        return userMapper.mapToDto(user);
-    }
-
-    private User findUserById(long userId) throws UserNotFoundException {
-        return userRepository.findById(userId)
-                .orElseThrow(() -> new UserNotFoundException(userId));
-    }
-
-    @Autowired
-    public void setUserRepository(UserRepository userRepository) {
-        this.userRepository = userRepository;
-    }
-
-    @Autowired
-    public void setGlobalRoleRepository(GlobalRoleRepository globalRoleRepository) {
-        this.globalRoleRepository = globalRoleRepository;
-    }
-
-    @Autowired
-    public void setUserMapper(UserMapper userMapper) {
-        this.userMapper = userMapper;
-    }
-
-    @Autowired
-    public void setPasswordEncoder(PasswordEncoder passwordEncoder) {
-        this.passwordEncoder = passwordEncoder;
+    private User findUserById(ObjectId id) throws UserNotFoundException {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException(id));
     }
 }

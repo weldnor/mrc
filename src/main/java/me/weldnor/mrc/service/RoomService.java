@@ -3,11 +3,11 @@ package me.weldnor.mrc.service;
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.dto.room.NewRoomDto;
 import me.weldnor.mrc.domain.dto.room.RoomDto;
-import me.weldnor.mrc.domain.dto.room.UpdateRoomDto;
 import me.weldnor.mrc.domain.entity.Room;
 import me.weldnor.mrc.exception.room.RoomNotFoundException;
 import me.weldnor.mrc.mapper.RoomMapper;
 import me.weldnor.mrc.repository.RoomRepository;
+import org.bson.types.ObjectId;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -39,22 +39,17 @@ public class RoomService {
         roomRepository.deleteAll();
     }
 
-    public RoomDto getRoom(long roomId) throws RoomNotFoundException {
+    public RoomDto getRoom(ObjectId roomId) throws RoomNotFoundException {
         var room = findRoomById(roomId);
         return roomMapper.mapToDto(room);
     }
 
-    public void updateRoom(long roomId, UpdateRoomDto updateUserDto) throws RoomNotFoundException {
-        var room = findRoomById(roomId);
-        roomMapper.updateEntity(room, updateUserDto);
+    public void deleteRoom(ObjectId id) {
+        roomRepository.deleteById(id);
     }
 
-    public void deleteRoom(long roomId) {
-        roomRepository.deleteById(roomId);
-    }
-
-    private Room findRoomById(long roomId) throws RoomNotFoundException {
-        return roomRepository.findById(roomId)
-                .orElseThrow(() -> new RoomNotFoundException(roomId));
+    private Room findRoomById(ObjectId id) throws RoomNotFoundException {
+        return roomRepository.findById(id)
+                .orElseThrow(() -> new RoomNotFoundException(id));
     }
 }

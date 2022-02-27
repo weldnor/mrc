@@ -1,45 +1,23 @@
 package me.weldnor.mrc.domain.entity;
 
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import org.bson.types.ObjectId;
 
-import javax.persistence.*;
-import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
-
-@Entity
-@Table(name = "person")
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class User {
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "person_id")
-    private Long userId;
-
-    @Column(unique = true, nullable = false)
+    private ObjectId id;
     private String email;
-
     private String name;
+    private String passwordHash;
+    private Role role;
 
-
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private UserPassword password;
-
-    @Column(nullable = false)
-    private LocalDate registrationDate = LocalDate.now();
-
-    @ManyToMany
-    @JoinTable(
-            name = "person_global_role",
-            joinColumns = @JoinColumn(name = "person_id"),
-            inverseJoinColumns = @JoinColumn(name = "global_role_id"))
-    @EqualsAndHashCode.Exclude
-    @ToString.Exclude
-    private Set<GlobalRole> globalRoles = new HashSet<>();
-
+    public enum Role {
+        USER, ADMIN
+    }
 }

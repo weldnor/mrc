@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 public class ApiError {
     private String message;
-    private LocalDateTime dateTime = LocalDateTime.now();
+    private Instant timestamp = Instant.now();
 
     public ApiError(Exception exception) {
         message = exception.getMessage();

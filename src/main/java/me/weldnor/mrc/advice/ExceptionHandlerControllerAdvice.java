@@ -2,7 +2,6 @@ package me.weldnor.mrc.advice;
 
 
 import me.weldnor.mrc.exception.ApiError;
-import me.weldnor.mrc.exception.globalrole.GlobalRoleNotFoundException;
 import me.weldnor.mrc.exception.room.RoomNotFoundException;
 import me.weldnor.mrc.exception.user.UserNotFoundException;
 import org.springframework.http.HttpStatus;
@@ -14,7 +13,6 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 @ControllerAdvice
 public class ExceptionHandlerControllerAdvice {
     @ExceptionHandler({
-            GlobalRoleNotFoundException.class,
             UserNotFoundException.class,
             RoomNotFoundException.class,
     })

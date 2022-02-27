@@ -2,12 +2,10 @@ package me.weldnor.mrc.controller.http;
 
 
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.domain.dto.login.LoginRequestDto;
-import me.weldnor.mrc.domain.dto.password.UpdatePasswordDto;
-import me.weldnor.mrc.domain.dto.user.NewUserDto;
 import me.weldnor.mrc.domain.dto.user.UserDto;
 import me.weldnor.mrc.exception.user.UserNotFoundException;
 import me.weldnor.mrc.service.UserService;
+import org.bson.types.ObjectId;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -34,33 +32,18 @@ public class UserController {
     }
 
     @GetMapping("/{userId}")
-    public UserDto getUserById(@PathVariable long userId) throws UserNotFoundException {
+    public UserDto getUserById(@PathVariable ObjectId userId) throws UserNotFoundException {
         return userService.getUser(userId);
     }
 
-    @PostMapping
-    public UserDto addUser(@RequestBody NewUserDto newUserDto) {
-        return userService.addUser(newUserDto);
-    }
-
     @DeleteMapping("/{userId}")
-    public void deleteUser(@PathVariable long userId) {
+    public void deleteUser(@PathVariable ObjectId userId) {
         userService.deleteUser(userId);
     }
 
 
-    @PutMapping("/{userId}/password")
-    public boolean updateUserPassword(@PathVariable long userId, @RequestBody UpdatePasswordDto updatePasswordDto) throws UserNotFoundException {
-        return userService.updateUserPassword(userId, updatePasswordDto);
-    }
-
-    @PostMapping("/login")
-    public UserDto login(@RequestBody LoginRequestDto loginRequestDto) {
-        return userService.login(loginRequestDto).orElseThrow();
-    }
-
-    @PostMapping("/register")
-    public UserDto register(@RequestBody NewUserDto newUserDto) {
-        return userService.register(newUserDto);
-    }
+//    @PutMapping("/{userId}/password")
+//    public boolean updateUserPassword(@PathVariable long userId, @RequestBody UpdatePasswordDto updatePasswordDto) throws UserNotFoundException {
+//        return userService.updateUserPassword(userId, updatePasswordDto);
+//    }
 }

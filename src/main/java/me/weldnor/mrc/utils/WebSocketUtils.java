@@ -19,7 +19,6 @@ public final class WebSocketUtils {
     }
 
     public static void sendMessage(WebSocketSession session, String message) {
-//        log.info(message);
         try {
             session.sendMessage(new TextMessage(message));
         } catch (IOException e) {
