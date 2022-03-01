@@ -1,27 +1,16 @@
-//package me.weldnor.mrc.controller.ws;
-//
-//import com.fasterxml.jackson.databind.JsonNode;
-//import com.fasterxml.jackson.databind.ObjectMapper;
-//import com.fasterxml.jackson.databind.node.ArrayNode;
-//import com.fasterxml.jackson.databind.node.ObjectNode;
-//import lombok.SneakyThrows;
-//import lombok.extern.slf4j.Slf4j;
-//import me.weldnor.mrc.domain.pojo.UserSession;
-//import me.weldnor.mrc.service.UserSessionService;
-//import org.kurento.client.IceCandidate;
-//import org.kurento.client.KurentoClient;
-//import org.kurento.client.MediaPipeline;
-//import org.springframework.scheduling.annotation.Scheduled;
-//import org.springframework.stereotype.Component;
-//import org.springframework.web.socket.CloseStatus;
-//import org.springframework.web.socket.TextMessage;
-//import org.springframework.web.socket.WebSocketSession;
-//import org.springframework.web.socket.handler.TextWebSocketHandler;
-//
-//@Component
-//@Slf4j
-//public class MyWebSocketHandler extends TextWebSocketHandler {
-//
+package me.weldnor.mrc.controller.ws;
+
+import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+@Component
+@Slf4j
+public class MyWebSocketHandler extends TextWebSocketHandler {
+
 //    private final MediaPipeline pipeline;
 //
 //    private final UserSessionService userSessionService;
@@ -32,11 +21,11 @@
 //        this.userSessionService = userSessionService;
 //        this.pipeline = kurentoClient.createMediaPipeline();
 //    }
-//
-//
-//    @Override
-//    @SneakyThrows
-//    public void handleTextMessage(WebSocketSession session, TextMessage message) {
+
+
+    @Override
+    @SneakyThrows
+    public void handleTextMessage(WebSocketSession session, TextMessage message) {
 //        final JsonNode parsedMessage = objectMapper.readTree(message.getPayload());
 //
 //        final UserSession user = userSessionService.getSessionByWs(session).orElse(null);
@@ -88,8 +77,8 @@
 //            default:
 //                break;
 //        }
-//    }
-//
+    }
+
 //    private void onAcceptFilter(UserSession user, long targetId) {
 //        log.info("onAcceptFilter");
 //        var target = userSessionService.getSessionByUserId(targetId).orElseThrow();
@@ -197,4 +186,4 @@
 //        var users = userSessionService.getAllSessions();
 //        log.info("active sessions: {}", users);
 //    }
-//}
+}
