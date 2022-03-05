@@ -24,6 +24,8 @@ import java.util.concurrent.ConcurrentMap;
 @Getter
 @Setter
 public class UserSession implements Closeable {
+    private static final String FILTER_COMMAND = "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1";
+
     private long userId;
     private long roomId;
     private final WebSocketSession webSocketSession;
@@ -45,7 +47,7 @@ public class UserSession implements Closeable {
         this.outgoingFullMedia = new WebRtcEndpoint.Builder(pipeline).build();
         this.outgoingFullMedia.addIceCandidateFoundListener(event -> iceCandidateFound(event.getCandidate()));
 
-        compressionFilter = new GStreamerFilter.Builder(pipeline, "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1").build();
+        compressionFilter = new GStreamerFilter.Builder(pipeline, FILTER_COMMAND).build();
         outgoingFullMedia.connect(compressionFilter);
     }
 
@@ -113,6 +115,7 @@ public class UserSession implements Closeable {
      * Создание  создание WebRtcEndpoint для получения видео пользователя.
      *
      * @param sender сессия пользователя, с которым надо создать соединение
+     * @param full
      * @return WebRtcEndpoint для подключения к пользователю
      */
     private WebRtcEndpoint createEndpointForUser(UserSession sender, boolean full) {
