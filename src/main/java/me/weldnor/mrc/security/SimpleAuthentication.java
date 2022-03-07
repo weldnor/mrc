@@ -1,6 +1,7 @@
 package me.weldnor.mrc.security;
 
 import lombok.Data;
+import org.bson.types.ObjectId;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -12,15 +13,15 @@ import java.util.List;
 @Data
 public class SimpleAuthentication implements Authentication {
 
-    private long userId;
+    private ObjectId userId;
     private List<GrantedAuthority> authorities = new ArrayList<>();
 
-    public SimpleAuthentication(long userId) {
+    public SimpleAuthentication(ObjectId userId) {
         this.userId = userId;
         authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
-    public SimpleAuthentication(long userId, List<GrantedAuthority> authorities) {
+    public SimpleAuthentication(ObjectId userId, List<GrantedAuthority> authorities) {
         this.userId = userId;
         this.authorities = authorities;
     }
@@ -57,6 +58,6 @@ public class SimpleAuthentication implements Authentication {
 
     @Override
     public String getName() {
-        return Long.toString(userId);
+        return userId.toString();
     }
 }
