@@ -1,0 +1,24 @@
+version: "3.9"
+services:
+  kurento:
+    image: kurento/kurento-media-server:latest
+    ports:
+      - "8888:8888/tcp"
+      - "5000-5050:5000-5050/udp"
+    environment:
+      - KMS_MIN_PORT=5000
+      - KMS_MAX_PORT=5050
+  mongo:
+    image: mongo:latest
+    restart: always
+    ports:
+      - "27017:27017/tcp"
+  backend:
+    image: ghcr.io/weldnor/mrc:latest
+    depends_on:
+      - mongo
+      - kurento
+    ports:
+      - "80:80"
+    environment:
+      - KURENTO_URL:ws://kurento:8888/kurento
