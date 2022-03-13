@@ -21,4 +21,5 @@ services:
     ports:
       - "80:80"
     environment:
-      - KURENTO_URL:ws://kurento:8888/kurento
+      KURENTO_URL: ws://kurento:8888/kurento
+      MONGO_HOST: mongo
