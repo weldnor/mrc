@@ -1,28 +1,28 @@
 package me.weldnor.mrc.config;
 
-import me.weldnor.mrc.controller.ws.MyWebSocketHandler;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
-import org.springframework.web.socket.config.annotation.EnableWebSocket;
-import org.springframework.web.socket.config.annotation.WebSocketConfigurer;
-import org.springframework.web.socket.config.annotation.WebSocketHandlerRegistry;
+import org.springframework.messaging.simp.config.MessageBrokerRegistry;
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker;
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry;
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer;
 
 @Configuration
-@EnableWebSocket
+@EnableWebSocketMessageBroker
 @Profile("!test")
-public class WebsocketConfig implements WebSocketConfigurer {
-
-    private final MyWebSocketHandler myWebSocketHandler;
-
-    public WebsocketConfig(MyWebSocketHandler myWebSocketHandler) {
-        this.myWebSocketHandler = myWebSocketHandler;
-    }
-
+public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
-    public void registerWebSocketHandlers(WebSocketHandlerRegistry registry) {
-        registry
-                .addHandler(myWebSocketHandler, "/ws")
-                .setAllowedOriginPatterns("*"); //TODO fixme
+    public void configureMessageBroker(MessageBrokerRegistry config) {
+        config.enableSimpleBroker("/queue");
+        config.setApplicationDestinationPrefixes("/app");
+        config.setUserDestinationPrefix("/user");
+    }
+
+    @Override
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
+        registry.addEndpoint("/ws")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 }
