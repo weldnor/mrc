@@ -19,7 +19,7 @@ services:
       - mongo
       - kurento
     ports:
-      - "8080:8080"
+      - "443:443"
     environment:
       KURENTO_URL: ws://kurento:8888/kurento
       MONGO_HOST: mongo
