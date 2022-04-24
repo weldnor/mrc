@@ -13,3 +13,13 @@ services:
     restart: always
     ports:
       - "27017:27017/tcp"
+  backend:
+    image: ghcr.io/weldnor/mrc:latest
+    depends_on:
+      - mongo
+      - kurento
+    ports:
+      - "443:443"
+    environment:
+      KURENTO_URL: ws://kurento:8888/kurento
+      MONGO_HOST: mongo
