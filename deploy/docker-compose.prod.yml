@@ -23,3 +23,6 @@ services:
     environment:
       KURENTO_URL: ws://kurento:8888/kurento
       MONGO_HOST: mongo
+      SPRING_PROFILES_ACTIVE: prod
+#      KEYSTORE_PASSWORD: ""
+#      KEY_PASSWORD: ""
