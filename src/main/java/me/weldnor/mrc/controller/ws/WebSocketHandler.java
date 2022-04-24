@@ -6,8 +6,8 @@ import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
-import me.weldnor.mrc.domain.pojo.UserSession;
-import me.weldnor.mrc.service.UserSessionService;
+import me.weldnor.mrc.domain.pojo.StreamSession;
+import me.weldnor.mrc.service.StreamSessionService;
 import org.kurento.client.IceCandidate;
 import org.kurento.client.KurentoClient;
 import org.kurento.client.MediaPipeline;
@@ -26,12 +26,12 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     private final MediaPipeline pipeline;
 
-    private final UserSessionService userSessionService;
+    private final StreamSessionService streamSessionService;
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public WebSocketHandler(UserSessionService userSessionService, KurentoClient kurentoClient) {
-        this.userSessionService = userSessionService;
+    public WebSocketHandler(StreamSessionService streamSessionService, KurentoClient kurentoClient) {
+        this.streamSessionService = streamSessionService;
         this.pipeline = kurentoClient.createMediaPipeline();
     }
 
@@ -41,7 +41,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     public void handleTextMessage(WebSocketSession session, TextMessage message) {
         final JsonNode parsedMessage = objectMapper.readTree(message.getPayload());
 
-        final UserSession user = userSessionService.getSessionByWs(session).orElse(null);
+        final StreamSession user = streamSessionService.getSessionByWs(session).orElse(null);
 
         if (user != null) {
             log.info("Incoming message from user '{} id: {}'", user.getUserId(), parsedMessage.get("id").asText());
@@ -57,7 +57,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
                 break;
             case "receiveVideoFrom":
                 userId = parsedMessage.get("userId").asLong();
-                final UserSession sender = userSessionService.getSessionByUserId(userId)
+                final StreamSession sender = streamSessionService.getSessionByUserId(userId)
                         .orElseThrow();
                 final String sdpOffer = parsedMessage.get("sdpOffer").asText();
                 assert user != null;
@@ -92,15 +92,15 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void onAcceptFilter(UserSession user, long targetId) {
+    private void onAcceptFilter(StreamSession user, long targetId) {
         log.info("onAcceptFilter");
-        var target = userSessionService.getSessionByUserId(targetId).orElseThrow();
+        var target = streamSessionService.getSessionByUserId(targetId).orElseThrow();
         user.acceptFilterForUser(target);
     }
 
-    private void onDeclineFilter(UserSession user, long targetId) {
+    private void onDeclineFilter(StreamSession user, long targetId) {
         log.info("onDeclineFilter");
-        var target = userSessionService.getSessionByUserId(targetId).orElseThrow();
+        var target = streamSessionService.getSessionByUserId(targetId).orElseThrow();
         user.declineFilterForUser(target);
     }
 
@@ -108,7 +108,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
     @Override
     public void afterConnectionClosed(WebSocketSession session, CloseStatus status) {
         log.info("afterConnectionClosed");
-        userSessionService.getSessionByWs(session)
+        streamSessionService.getSessionByWs(session)
                 .ifPresent(this::onLeaveRoom);
     }
 
@@ -116,22 +116,22 @@ public class WebSocketHandler extends TextWebSocketHandler {
         log.info("joinRoom");
         log.info("PARTICIPANT {}: trying to join room {}", userId, roomId);
 
-        UserSession user = new UserSession(userId, roomId, session, pipeline);
+        StreamSession user = new StreamSession(userId, roomId, session, pipeline);
 
         notifyThatUserJoinToRoom(user);
         sendParticipantIds(user);
 
-        userSessionService.addSession(user);
+        streamSessionService.addSession(user);
     }
 
-    private void notifyThatUserJoinToRoom(UserSession user) {
+    private void notifyThatUserJoinToRoom(StreamSession user) {
         var userId = user.getUserId();
         var roomId = user.getRoomId();
         ObjectNode newParticipantMsg = objectMapper.createObjectNode();
         newParticipantMsg.put("id", "newParticipantArrived");
         newParticipantMsg.put("userId", user.getUserId());
 
-        var participants = userSessionService.getSessionsByRoomId(roomId);
+        var participants = streamSessionService.getSessionsByRoomId(roomId);
         log.info("ROOM {}: notifying other participants of new participant {}", roomId,
                 userId);
 
@@ -140,7 +140,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         }
     }
 
-    private void notifyThatUserLeaveRoom(UserSession user) {
+    private void notifyThatUserLeaveRoom(StreamSession user) {
         var userId = user.getUserId();
         var roomId = user.getRoomId();
 
@@ -148,7 +148,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
         newParticipantMsg.put("id", "participantLeft");
         newParticipantMsg.put("userId", user.getUserId());
 
-        var participants = userSessionService.getSessionsByRoomId(roomId);
+        var participants = streamSessionService.getSessionsByRoomId(roomId);
         log.info("ROOM {}: notifying other participants of left participant {}", roomId,
                 userId);
 
@@ -160,9 +160,9 @@ public class WebSocketHandler extends TextWebSocketHandler {
     }
 
     @SneakyThrows
-    private void sendParticipantIds(UserSession session) {
+    private void sendParticipantIds(StreamSession session) {
         log.info("sendParticipantIds");
-        var participants = userSessionService.getSessionsByRoomId(session.getRoomId());
+        var participants = streamSessionService.getSessionsByRoomId(session.getRoomId());
 
         ArrayNode participantsArray = objectMapper.createArrayNode();
         for (var participant : participants) {
@@ -181,14 +181,14 @@ public class WebSocketHandler extends TextWebSocketHandler {
         session.sendMessage(existingParticipantsMsg);
     }
 
-    private void onLeaveRoom(UserSession user) {
+    private void onLeaveRoom(StreamSession user) {
         log.info("leaveRoom");
         log.info("PARTICIPANT {}: Leaving room {}", user.getUserId(), user.getRoomId());
         notifyThatUserLeaveRoom(user);
-        userSessionService.closeSession(user);
+        streamSessionService.closeSession(user);
     }
 
-    private void onPing(UserSession user) {
+    private void onPing(StreamSession user) {
         var json = objectMapper.createObjectNode();
         json.put("id", "pong");
         user.sendMessage(json);
@@ -196,7 +196,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
     @Scheduled(fixedDelay = 15000)
     public void statistic() {
-        var users = userSessionService.getAllSessions();
+        var users = streamSessionService.getAllSessions();
         log.info("active sessions: {}", users);
     }
 }

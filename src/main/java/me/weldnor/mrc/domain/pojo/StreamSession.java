@@ -23,7 +23,7 @@ import java.util.concurrent.ConcurrentMap;
 @Slf4j
 @Getter
 @Setter
-public class UserSession implements Closeable {
+public class StreamSession implements Closeable {
     private static final String FILTER_COMMAND = "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1";
 
     private long userId;
@@ -38,7 +38,7 @@ public class UserSession implements Closeable {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public UserSession(final long userId, long roomId, final WebSocketSession webSocketSession, MediaPipeline pipeline) {
+    public StreamSession(final long userId, long roomId, final WebSocketSession webSocketSession, MediaPipeline pipeline) {
         this.pipeline = pipeline;
         this.userId = userId;
         this.roomId = roomId;
@@ -70,7 +70,7 @@ public class UserSession implements Closeable {
      * @param sender   - сессия пользователя,видео которого мы хотим получить
      * @param sdpOffer - передаваемый sdpOffer текущего пользователя
      */
-    public void receiveVideoFrom(UserSession sender, String sdpOffer) {
+    public void receiveVideoFrom(StreamSession sender, String sdpOffer) {
         long senderId = sender.getUserId();
         log.info("USER {}: connecting with {} in room {}", this.userId, senderId, this.roomId);
         log.info("USER {}: SdpOffer for {}", this.userId, senderId);
@@ -93,7 +93,7 @@ public class UserSession implements Closeable {
      * @param sender сессия пользователя
      * @return WebRtcEndpoint для подключения к пользователю
      */
-    private WebRtcEndpoint getEndpointForUser(final UserSession sender) {
+    private WebRtcEndpoint getEndpointForUser(final StreamSession sender) {
         long senderId = sender.getUserId();
 
         if (senderId == this.userId) {
@@ -118,7 +118,7 @@ public class UserSession implements Closeable {
      * @param full
      * @return WebRtcEndpoint для подключения к пользователю
      */
-    private WebRtcEndpoint createEndpointForUser(UserSession sender, boolean full) {
+    private WebRtcEndpoint createEndpointForUser(StreamSession sender, boolean full) {
         long senderId = sender.getUserId();
         log.info("PARTICIPANT {}: creating new endpoint for {}", this.getUserId(), senderId);
 
@@ -164,12 +164,12 @@ public class UserSession implements Closeable {
             @Override
             public void onSuccess(Void result) {
                 log.info("PARTICIPANT {}: Released successfully incoming EP for {}",
-                        UserSession.this.getUserId(), senderId);
+                        StreamSession.this.getUserId(), senderId);
             }
 
             @Override
             public void onError(Throwable cause) {
-                log.warn("PARTICIPANT {}: Could not release incoming EP for {}", UserSession.this.userId,
+                log.warn("PARTICIPANT {}: Could not release incoming EP for {}", StreamSession.this.userId,
                         senderId);
             }
         });
@@ -194,12 +194,12 @@ public class UserSession implements Closeable {
                 @Override
                 public void onSuccess(Void result) {
                     log.info("PARTICIPANT {}: Released successfully incoming EP for {}",
-                            UserSession.this.userId, remoteParticipantId);
+                            StreamSession.this.userId, remoteParticipantId);
                 }
 
                 @Override
                 public void onError(Throwable cause) {
-                    log.warn("PARTICIPANT {}: Could not release incoming EP for {}", UserSession.this.userId,
+                    log.warn("PARTICIPANT {}: Could not release incoming EP for {}", StreamSession.this.userId,
                             remoteParticipantId);
                 }
             });
@@ -208,12 +208,12 @@ public class UserSession implements Closeable {
         outgoingFullMedia.release(new Continuation<>() {
             @Override
             public void onSuccess(Void result) {
-                log.info("PARTICIPANT {}: Released outgoing EP", UserSession.this.userId);
+                log.info("PARTICIPANT {}: Released outgoing EP", StreamSession.this.userId);
             }
 
             @Override
             public void onError(Throwable cause) {
-                log.warn("USER {}: Could not release outgoing EP", UserSession.this.userId);
+                log.warn("USER {}: Could not release outgoing EP", StreamSession.this.userId);
             }
         });
 
@@ -283,7 +283,7 @@ public class UserSession implements Closeable {
         if (o == null || getClass() != o.getClass()) {
             return false;
         }
-        UserSession that = (UserSession) o;
+        StreamSession that = (StreamSession) o;
         return userId == that.userId;
     }
 
@@ -292,7 +292,7 @@ public class UserSession implements Closeable {
         return Objects.hash(userId);
     }
 
-    public void acceptFilterForUser(UserSession target) {
+    public void acceptFilterForUser(StreamSession target) {
         var endpoint = incomingMedia.get(target.getUserId());
         target.getOutgoingFullMedia().disconnect(endpoint);
         target.getCompressionFilter().connect(endpoint);
@@ -300,7 +300,7 @@ public class UserSession implements Closeable {
         //            sender.getCompressionFilter().connect(incoming);
     }
 
-    public void declineFilterForUser(UserSession target) {
+    public void declineFilterForUser(StreamSession target) {
         var endpoint = incomingMedia.get(target.getUserId());
         target.getCompressionFilter().disconnect(endpoint);
         target.getOutgoingFullMedia().connect(endpoint);
