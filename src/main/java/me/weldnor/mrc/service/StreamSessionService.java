@@ -3,14 +3,15 @@ package me.weldnor.mrc.service;
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.pojo.StreamSession;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-import static me.weldnor.mrc.utils.WebSocketUtils.sendDebugMessage;
 
 @Service
 @Slf4j
@@ -21,13 +22,13 @@ public class StreamSessionService {
         return sessions;
     }
 
-    public List<StreamSession> getSessionsByRoomId(long roomId) {
-        return sessions.stream().filter(s -> s.getRoomId() == roomId)
+    public List<StreamSession> getSessionsByRoomId(String roomId) {
+        return sessions.stream().filter(s -> s.getRoomId().equals(roomId))
                 .collect(Collectors.toList());
     }
 
-    public Optional<StreamSession> getSessionByUserId(long userId) {
-        return sessions.stream().filter(s -> s.getUserId() == userId)
+    public Optional<StreamSession> getSessionByUserId(String userId) {
+        return sessions.stream().filter(s -> s.getUserId().equals(userId))
                 .findFirst();
     }
 
@@ -43,11 +44,15 @@ public class StreamSessionService {
 
     public void closeSession(StreamSession session) {
         try {
-            sendDebugMessage(session.getWebSocketSession(), "leaving form server...");
-        } catch (IllegalStateException exception) {
+            session.getWebSocketSession().close();
+        } catch (IOException e) {
             // ignore
         }
-        session.close();
         sessions.remove(session);
+    }
+
+    public void afterConnectionClosed(WebSocketSession webSocketSession, CloseStatus status) {
+        Optional<StreamSession> streamSessionOptional = getSessionByWs(webSocketSession);
+        streamSessionOptional.ifPresent(this::closeSession);
     }
 }
