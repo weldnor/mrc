@@ -39,6 +39,7 @@ public class StreamService {
         incomingWebRtcEndpoint.addIceCandidateFoundListener(iceCandidateFoundEvent -> {
             Map<String, Object> message = Map.of(
                     "type", "ice-candidate",
+                    "userId", userId,
                     "candidate", iceCandidateFoundEvent.getCandidate()
             );
             sendJsonMessage(session, message);
