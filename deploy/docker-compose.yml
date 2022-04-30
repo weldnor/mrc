@@ -13,3 +13,15 @@ services:
     restart: always
     ports:
       - "27017:27017/tcp"
+  coturn:
+    image: coturn/coturn:latest
+    restart: always
+    ports:
+      - "3478:3478"
+      - "3478:3478/udp"
+      - "5349:5349"
+      - "5349:5349/udp"
+      - "49160-49200:49160-49200/udp"
+    command:
+      - "--user=admin:admin"
+      - "--TURNSERVER_ENABLED=1"
