@@ -27,7 +27,7 @@ public class StreamService {
     }
 
     public void onJoinMessage(String userId, String roomId, WebSocketSession webSocketSession) {
-        // save session
+        // 1. save session
         StreamSession session = new StreamSession();
         session.setUserId(userId);
         session.setRoomId(roomId);
@@ -35,51 +35,61 @@ public class StreamService {
         session.setOutgoingWebRtcEndpoint(new WebRtcEndpoint.Builder(pipeline).build());
         streamSessionService.addSession(session);
 
+        // 2. add incoming endpoint
         WebRtcEndpoint incomingWebRtcEndpoint = session.getOutgoingWebRtcEndpoint();
         incomingWebRtcEndpoint.addIceCandidateFoundListener(iceCandidateFoundEvent -> {
-            Map<String, Object> message = Map.of(
-                    "type", "ice-candidate",
-                    "userId", userId,
-                    "candidate", iceCandidateFoundEvent.getCandidate()
-            );
+            Map<String, Object> message = Map.of("type", "ice-candidate", "userId", userId, "candidate", iceCandidateFoundEvent.getCandidate());
             sendJsonMessage(session, message);
         });
-    }
 
-    public void onGetParticipantsMessage(String userId, String roomId) {
-        StreamSession session = streamSessionService.getSessionByUserId(userId).orElseThrow();
-
-        List<String> participantIds = streamSessionService.getSessionsByRoomId(roomId).stream()
-                .map(StreamSession::getUserId)
-                .collect(Collectors.toList());
-
-        Map<String, Object> message = Map.of(
-                "type", "participants",
-                "participantIds", participantIds
-        );
-        sendJsonMessage(session, message);
+        // 3. send participants ids
+        sendParticipantIds(userId, roomId);
     }
 
     public void onIceCandidateMessage(String userId, String targetId, String candidate, String sdpMid, int sdpMLineIndex) {
-        StreamSession session = streamSessionService.getSessionByUserId(userId).orElseThrow();
-
         IceCandidate iceCandidate = new IceCandidate(candidate, sdpMid, sdpMLineIndex);
-        // fixme
 
-        if (userId.equals(targetId)) {
-            session.getOutgoingWebRtcEndpoint().addIceCandidate(iceCandidate);
-            return;
-        }
+        getEndpointForUser(userId, targetId).addIceCandidate(iceCandidate);
     }
 
-    public void onGetVideoMessage(String userId, String targetId) {
+    public void onGetVideoMessage(String userId, String targetId, String sdpOffer) {
+        StreamSession userSession = streamSessionService.getSessionByUserId(userId).orElseThrow();
+
+        WebRtcEndpoint endpoint = getEndpointForUser(userId, targetId);
+
+        String sdpAnswer = endpoint.processOffer(sdpOffer);
+
+        // send sdp answer
+        Map<String, Object> message = Map.of(
+                "type", "sdp-answer",
+                "userId", targetId,
+                "sdpAnswer", sdpAnswer
+        );
+        sendJsonMessage(userSession, message);
+
+        // gather candidates
+        endpoint.gatherCandidates();
+    }
+
+
+    public WebRtcEndpoint getEndpointForUser(String userId, String targetId) {
         StreamSession userSession = streamSessionService.getSessionByUserId(userId).orElseThrow();
         StreamSession targetSession = streamSessionService.getSessionByUserId(targetId).orElseThrow();
 
-        WebRtcEndpoint incomingWebRtcEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
-        incomingWebRtcEndpoint.connect(targetSession.getOutgoingWebRtcEndpoint());
+        if (userId.equals(targetId)) {
+            return userSession.getOutgoingWebRtcEndpoint();
+        }
 
-        incomingWebRtcEndpoint.addIceCandidateFoundListener(iceCandidateFoundEvent -> {
+        WebRtcEndpoint incomingEndpoint = userSession.getIncomingWebRtcEndpoints().get(targetId);
+        if (incomingEndpoint != null) {
+            return incomingEndpoint;
+        }
+
+        // create new endpoint
+        incomingEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
+        targetSession.getOutgoingWebRtcEndpoint().connect(incomingEndpoint);
+
+        incomingEndpoint.addIceCandidateFoundListener(iceCandidateFoundEvent -> {
             Map<String, Object> message = Map.of(
                     "type", "ice-candidate",
                     "userId", targetId,
@@ -88,53 +98,25 @@ public class StreamService {
             sendJsonMessage(userSession, message);
         });
 
-        userSession.getIncomingWebRtcEndpoints().put(targetId, incomingWebRtcEndpoint);
-
-        String offer = incomingWebRtcEndpoint.generateOffer();
-
-        incomingWebRtcEndpoint.gatherCandidates();
-
-
-        Map<String, Object> message = Map.of(
-                "type", "sdp-offer",
-                "userId", targetId,
-                "sdpOffer", offer
-        );
-        sendJsonMessage(userSession, message);
+        userSession.getIncomingWebRtcEndpoints().put(targetId, incomingEndpoint);
+        return incomingEndpoint;
     }
 
-    public void onSdpAnswerMessage(String userId, String targetId, String sdpAnswer) {
-        StreamSession userSession = streamSessionService.getSessionByUserId(userId).orElseThrow();
-
-        WebRtcEndpoint incomingEndpoint = userSession.getIncomingWebRtcEndpoints().get(targetId);
-
-        incomingEndpoint.processAnswer(sdpAnswer);
-
-    }
-
-    public void onSdpOfferMessage(String userId, String targetId, String sdp) {
+    private void sendParticipantIds(String userId, String roomId) {
         StreamSession session = streamSessionService.getSessionByUserId(userId).orElseThrow();
-        String sdpAnswer = "";
 
-        if (userId.equals(targetId)) {
-            sdpAnswer = session.getOutgoingWebRtcEndpoint().processOffer(sdp);
-            session.getOutgoingWebRtcEndpoint().gatherCandidates();
-        }
+        List<String> participantIds = streamSessionService.getSessionsByRoomId(roomId).stream()
+                .map(StreamSession::getUserId)
+                .filter(participantId -> !participantId.equals(userId))
+                .collect(Collectors.toList());
 
-
-        Map<String, Object> messageObject = Map.of(
-                "type", "sdp-answer",
-                "userId", targetId,
-                "sdpAnswer", sdpAnswer);
-
-        sendJsonMessage(session, messageObject);
+        Map<String, Object> message = Map.of("type", "participants", "participantIds", participantIds);
+        sendJsonMessage(session, message);
     }
-
 
     private void sendJsonMessage(StreamSession streamSession, Object message) {
         WebSocketSession webSocketSession = streamSession.getWebSocketSession();
         WebSocketUtil.sendJsonMessage(webSocketSession, message);
     }
-
 
 }
