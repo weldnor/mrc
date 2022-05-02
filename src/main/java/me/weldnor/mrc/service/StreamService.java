@@ -7,6 +7,7 @@ import org.kurento.client.IceCandidate;
 import org.kurento.client.KurentoClient;
 import org.kurento.client.MediaPipeline;
 import org.kurento.client.WebRtcEndpoint;
+import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -16,6 +17,7 @@ import java.util.stream.Collectors;
 
 @Service
 @Slf4j
+@Profile("!test")
 public class StreamService {
     private final StreamSessionService streamSessionService;
 
