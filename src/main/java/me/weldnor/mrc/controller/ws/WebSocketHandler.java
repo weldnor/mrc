@@ -42,6 +42,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         if (type.equals("join")) {
             streamService.onJoinMessage(userId, roomId, session);
+            return;
         }
 
         String targetId = parsedMessage.get("targetId").asText();
@@ -51,6 +52,7 @@ public class WebSocketHandler extends TextWebSocketHandler {
             String sdpMid = parsedMessage.get("sdpMid").asText();
             int sdpMLineIndex = parsedMessage.get("sdpMLineIndex").asInt();
             streamService.onIceCandidateMessage(userId, targetId, candidate, sdpMid, sdpMLineIndex);
+            return;
         }
 
         if (type.equals("get-video")) {
