@@ -8,8 +8,11 @@ import org.springframework.web.socket.WebSocketSession;
 
 @Slf4j
 public final class WebSocketUtil {
-
     private static final ObjectMapper MAPPER = new ObjectMapper();
+
+    private WebSocketUtil() {
+    }
+
 
     public static void sendJsonMessage(WebSocketSession webSocketSession, Object o) {
         try {

@@ -36,38 +36,26 @@ public class WebSocketHandler extends TextWebSocketHandler {
 
         log.info(String.valueOf(parsedMessage));
 
+        String userId = parsedMessage.get("userId").asText();
+        String roomId = parsedMessage.get("roomId").asText();
+        String type = parsedMessage.get("type").asText();
 
-        switch (parsedMessage.get("type").asText()) {
-            case "join": {
-                String userId = parsedMessage.get("userId").asText();
-                String roomId = parsedMessage.get("roomId").asText();
-                streamService.onJoinMessage(userId, roomId, session);
-                break;
-            }
-            case "ice-candidate": {
-                String userId = parsedMessage.get("userId").asText();
-                String targetId = parsedMessage.get("targetId").asText();
+        if (type.equals("join")) {
+            streamService.onJoinMessage(userId, roomId, session);
+        }
 
-                // todo ignore empty ice-candidates
-                if (!parsedMessage.has("candidate")) {
-                    break;
-                }
+        String targetId = parsedMessage.get("targetId").asText();
 
-                String candidate = parsedMessage.get("candidate").asText();
-                String sdpMid = parsedMessage.get("sdpMid").asText();
-                int sdpMLineIndex = parsedMessage.get("sdpMLineIndex").asInt();
+        if (type.equals("ice-candidate") && parsedMessage.has("candidate")) {
+            String candidate = parsedMessage.get("candidate").asText();
+            String sdpMid = parsedMessage.get("sdpMid").asText();
+            int sdpMLineIndex = parsedMessage.get("sdpMLineIndex").asInt();
+            streamService.onIceCandidateMessage(userId, targetId, candidate, sdpMid, sdpMLineIndex);
+        }
 
-                streamService.onIceCandidateMessage(userId, targetId, candidate, sdpMid, sdpMLineIndex);
-                break;
-            }
-            case "get-video": {
-                String userId = parsedMessage.get("userId").asText();
-                String targetId = parsedMessage.get("targetId").asText();
-                String sdpOffer = parsedMessage.get("sdpOffer").asText();
-                streamService.onGetVideoMessage(userId, targetId, sdpOffer);
-            }
-            default:
-                break;
+        if (type.equals("get-video")) {
+            String sdpOffer = parsedMessage.get("sdpOffer").asText();
+            streamService.onGetVideoMessage(userId, targetId, sdpOffer);
         }
     }
 
