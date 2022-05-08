@@ -2,12 +2,14 @@ package me.weldnor.mrc.service;
 
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.pojo.StreamSession;
+import me.weldnor.mrc.event.StreamSessionClosedEvent;
 import me.weldnor.mrc.utils.WebSocketUtil;
 import org.kurento.client.IceCandidate;
 import org.kurento.client.KurentoClient;
 import org.kurento.client.MediaPipeline;
 import org.kurento.client.WebRtcEndpoint;
 import org.springframework.context.annotation.Profile;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.WebSocketSession;
 
@@ -46,12 +48,18 @@ public class StreamService {
 
         // 3. send participants ids
         sendParticipantIds(userId, roomId);
+        notifyThatParticipantJoin(userId, roomId);
     }
 
     public void onIceCandidateMessage(String userId, String targetId, String candidate, String sdpMid, int sdpMLineIndex) {
         IceCandidate iceCandidate = new IceCandidate(candidate, sdpMid, sdpMLineIndex);
 
         getEndpointForUser(userId, targetId).addIceCandidate(iceCandidate);
+    }
+
+    @EventListener(StreamSessionClosedEvent.class)
+    public void onSessionStreamClosed(StreamSessionClosedEvent event) {
+        notifyThatParticipantLeft(event.getUserId(), event.getRoomId());
     }
 
     public void onGetVideoMessage(String userId, String targetId, String sdpOffer) {
@@ -114,6 +122,27 @@ public class StreamService {
 
         Map<String, Object> message = Map.of("type", "participants", "participantIds", participantIds);
         sendJsonMessage(session, message);
+    }
+
+    private void notifyThatParticipantLeft(String userId, String roomId) {
+        Map<String, Object> message = Map.of(
+                "type", "participants/left",
+                "userId", userId
+        );
+
+        streamSessionService.getSessionsByRoomId(roomId)
+                .forEach(session -> sendJsonMessage(session, message));
+    }
+
+    private void notifyThatParticipantJoin(String userId, String roomId) {
+        Map<String, Object> message = Map.of(
+                "type", "participants/new",
+                "userId", userId
+        );
+
+        streamSessionService.getSessionsByRoomId(roomId).stream()
+                .filter(session -> !session.getUserId().equals(userId))
+                .forEach(session -> sendJsonMessage(session, message));
     }
 
     private void sendJsonMessage(StreamSession streamSession, Object message) {
