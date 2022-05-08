@@ -59,6 +59,19 @@ public class WebSocketHandler extends TextWebSocketHandler {
             String sdpOffer = parsedMessage.get("sdpOffer").asText();
             streamService.onGetVideoMessage(userId, targetId, sdpOffer);
         }
+
+        if (type.equals("request-control")) {
+            // todo
+        }
+
+        if (type.equals("accept-control")) {
+            // todo
+        }
+
+        if (type.equals("control")) {
+            JsonNode command = parsedMessage.get("command");
+            streamService.onControlMessage(userId, targetId, command);
+        }
     }
 
     @Override

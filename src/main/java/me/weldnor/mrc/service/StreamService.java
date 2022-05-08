@@ -1,5 +1,6 @@
 package me.weldnor.mrc.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.pojo.StreamSession;
 import me.weldnor.mrc.event.StreamSessionClosedEvent;
@@ -79,6 +80,23 @@ public class StreamService {
 
         // gather candidates
         endpoint.gatherCandidates();
+    }
+
+    public void onRequestControlMessage(String userId, String targetId) {
+    }
+
+    public void onAcceptControlMessage(String userId, String targetId) {
+    }
+
+    public void onControlMessage(String userId, String targetId, JsonNode command) {
+        StreamSession targetSession = streamSessionService.getSessionByUserId(targetId).orElseThrow();
+
+        Map<String, Object> message = Map.of(
+                "type", "control",
+                "userId", userId,
+                "command", command
+        );
+        sendJsonMessage(targetSession, message);
     }
 
 
