@@ -24,6 +24,7 @@ public class RoomChangeLog {
 
         Room room = new Room();
         room.setCreator(exampleUser.getId());
+        room.setName("test name");
 
         roomRepository.save(room);
     }

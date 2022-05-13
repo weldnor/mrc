@@ -12,4 +12,5 @@ import org.bson.types.ObjectId;
 @Builder
 public class NewRoomDto {
     private ObjectId creator;
+    private String name;
 }

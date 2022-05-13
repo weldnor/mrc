@@ -13,4 +13,5 @@ import org.bson.types.ObjectId;
 public class RoomDto {
     private ObjectId id;
     private ObjectId creator;
+    private String name;
 }
