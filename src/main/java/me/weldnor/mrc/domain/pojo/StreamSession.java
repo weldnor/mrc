@@ -6,6 +6,8 @@ import org.apache.commons.lang3.builder.ToStringExclude;
 import org.kurento.client.WebRtcEndpoint;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -14,6 +16,7 @@ public class StreamSession {
 
     private String userId;
     private String roomId;
+    private Set<String> trustedUserIds = new HashSet<>();
 
     @EqualsExclude
     @ToStringExclude

@@ -83,16 +83,26 @@ public class StreamService {
     }
 
     public void onRequestControlMessage(String userId, String targetId) {
+        StreamSession targetSession = streamSessionService.getSessionByUserId(targetId).orElseThrow();
+
+        Map<String, Object> message = Map.of(
+                "type", "control/request",
+                "userId", userId
+        );
+
+        sendJsonMessage(targetSession, message);
     }
 
     public void onAcceptControlMessage(String userId, String targetId) {
+        StreamSession userSession = streamSessionService.getSessionByUserId(userId).orElseThrow();
+        userSession.getTrustedUserIds().add(targetId);
     }
 
     public void onControlMessage(String userId, String targetId, JsonNode command) {
         StreamSession targetSession = streamSessionService.getSessionByUserId(targetId).orElseThrow();
 
         Map<String, Object> message = Map.of(
-                "type", "control",
+                "type", "control/command",
                 "userId", userId,
                 "command", command
         );
@@ -141,6 +151,7 @@ public class StreamService {
         Map<String, Object> message = Map.of("type", "participants", "participantIds", participantIds);
         sendJsonMessage(session, message);
     }
+
 
     private void notifyThatParticipantLeft(String userId, String roomId) {
         Map<String, Object> message = Map.of(
