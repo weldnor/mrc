@@ -59,6 +59,11 @@ public class WebSocketHandler extends TextWebSocketHandler {
             String sdpOffer = parsedMessage.get("sdpOffer").asText();
             streamService.onGetVideoMessage(userId, targetId, sdpOffer);
         }
+
+        if (type.equals("zoom")) {
+            boolean state = parsedMessage.get("enabled").asBoolean();
+            streamService.onZoomMessage(userId, targetId, state);
+        }
     }
 
     @Override
