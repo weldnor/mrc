@@ -118,7 +118,7 @@ public class StreamService {
 
         // create new endpoint
         incomingEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
-        targetSession.getOutgoingWebRtcEndpoint().connect(incomingEndpoint);
+        targetSession.getOutgoingCompressedFilter().connect(incomingEndpoint);
 
         incomingEndpoint.addIceCandidateFoundListener(iceCandidateFoundEvent -> {
             Map<String, Object> message = Map.of(
