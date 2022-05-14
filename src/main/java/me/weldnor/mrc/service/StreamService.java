@@ -18,6 +18,9 @@ import java.util.stream.Collectors;
 @Slf4j
 @Profile("!test")
 public class StreamService {
+    /**
+     * params for compressed gstreamer filter.
+     */
     public static final String COMPRESSED_FILTER_PARAMS = "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1";
     private final StreamSessionService streamSessionService;
 
