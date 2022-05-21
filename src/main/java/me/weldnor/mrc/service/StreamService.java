@@ -21,7 +21,7 @@ public class StreamService {
     /**
      * params for compressed gstreamer filter.
      */
-    public static final String COMPRESSED_FILTER_PARAMS = "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1";
+    public static final String COMPRESSED_FILTER_PARAMS = "capsfilter caps=video/x-raw,width=640,height=360,framerate=15/1";
     private final StreamSessionService streamSessionService;
 
     private final MediaPipeline pipeline;
