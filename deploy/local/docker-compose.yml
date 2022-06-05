@@ -1,0 +1,43 @@
+version: "3.9"
+services:
+  kurento:
+    image: kurento/kurento-media-server:latest
+    ports:
+      - "8888:8888/tcp"
+      - "5000-5050:5000-5050/udp"
+    environment:
+      - KMS_MIN_PORT=5000
+      - KMS_MAX_PORT=5050
+  mongo:
+    image: mongo:latest
+    restart: always
+    ports:
+      - "27017:27017/tcp"
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_storage:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    ports:
+      - "3478:3478"
+      - "9090:9090"
+  grafana:
+    image: grafana/grafana-enterprise:8.2.0
+    volumes:
+      - grafana_storage:/var/lib/grafana
+    ports:
+      - "3000:3000"
+    user: '104'
+
+
+volumes:
+  prometheus_storage: { }
+  grafana_storage: { }

@@ -24,5 +24,21 @@ services:
       KURENTO_URL: ws://kurento:8888/kurento
       MONGO_HOST: mongo
       SPRING_PROFILES_ACTIVE: prod
-#      KEYSTORE_PASSWORD: ""
-#      KEY_PASSWORD: ""
+  #      KEYSTORE_PASSWORD: ""
+  #      KEY_PASSWORD: ""
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node-exporter
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    ports:
+      - "9100:9100"

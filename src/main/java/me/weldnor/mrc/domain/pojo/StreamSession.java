@@ -15,6 +15,8 @@ public class StreamSession {
 
     private String userId;
     private String roomId;
+    private boolean zoomed = false;
+    private VideoSource videoSource = VideoSource.NONE;
 
     @EqualsExclude
     @ToStringExclude
@@ -31,5 +33,10 @@ public class StreamSession {
     @EqualsExclude
     @ToStringExclude
     private WebSocketSession webSocketSession;
+
+    public enum VideoSource {
+        DISPLAY, CAMERA, NONE
+    }
+
 }
 
