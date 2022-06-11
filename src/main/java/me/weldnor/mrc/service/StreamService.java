@@ -4,7 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import me.weldnor.mrc.domain.pojo.StreamSession;
 import me.weldnor.mrc.event.StreamSessionClosedEvent;
 import me.weldnor.mrc.utils.WebSocketUtil;
-import org.kurento.client.*;
+import org.kurento.client.IceCandidate;
+import org.kurento.client.KurentoClient;
+import org.kurento.client.MediaPipeline;
+import org.kurento.client.WebRtcEndpoint;
 import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -21,7 +24,6 @@ public class StreamService {
     /**
      * params for compressed gstreamer filter.
      */
-    public static final String COMPRESSED_FILTER_PARAMS = "capsfilter caps=video/x-raw,width=50,height=50,framerate=15/1";
     private final StreamSessionService streamSessionService;
 
     private final MediaPipeline pipeline;
@@ -40,10 +42,6 @@ public class StreamService {
 
         WebRtcEndpoint outgoingWebRtcEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
         session.setOutgoingWebRtcEndpoint(outgoingWebRtcEndpoint);
-
-        Filter outgoingCompressedFilter = new GStreamerFilter.Builder(pipeline, COMPRESSED_FILTER_PARAMS).build();
-        outgoingWebRtcEndpoint.connect(outgoingCompressedFilter);
-        session.setOutgoingCompressedFilter(outgoingCompressedFilter);
 
         streamSessionService.addSession(session);
 
@@ -89,21 +87,21 @@ public class StreamService {
         endpoint.gatherCandidates();
     }
 
-    public void onZoomMessage(String userId, String targetId, boolean enabled) {
-        StreamSession userSession = streamSessionService.getSessionByUserId(userId).orElseThrow();
-        StreamSession targetSession = streamSessionService.getSessionByUserId(targetId).orElseThrow();
-
-        WebRtcEndpoint incomingEndpoint = userSession.getIncomingWebRtcEndpoints().get(targetId);
-
-        if (enabled) {
-            targetSession.getOutgoingWebRtcEndpoint().disconnect(incomingEndpoint);
-            targetSession.getOutgoingCompressedFilter().connect(incomingEndpoint);
-            return;
-        }
-        // else
-        targetSession.getOutgoingCompressedFilter().disconnect(incomingEndpoint);
-        targetSession.getOutgoingWebRtcEndpoint().connect(incomingEndpoint);
-    }
+//    public void onZoomMessage(String userId, String targetId, boolean enabled) {
+//        StreamSession userSession = streamSessionService.getSessionByUserId(userId).orElseThrow();
+//        StreamSession targetSession = streamSessionService.getSessionByUserId(targetId).orElseThrow();
+//
+//        WebRtcEndpoint incomingEndpoint = userSession.getIncomingWebRtcEndpoints().get(targetId);
+//
+//        if (enabled) {
+//            targetSession.getOutgoingWebRtcEndpoint().disconnect(incomingEndpoint);
+//            targetSession.getOutgoingCompressedFilter().connect(incomingEndpoint);
+//            return;
+//        }
+//        // else
+//        targetSession.getOutgoingCompressedFilter().disconnect(incomingEndpoint);
+//        targetSession.getOutgoingWebRtcEndpoint().connect(incomingEndpoint);
+//    }
 
 
     public WebRtcEndpoint getEndpointForUser(String userId, String targetId) {
@@ -121,7 +119,7 @@ public class StreamService {
 
         // create new endpoint
         incomingEndpoint = new WebRtcEndpoint.Builder(pipeline).build();
-        targetSession.getOutgoingCompressedFilter().connect(incomingEndpoint);
+        targetSession.getOutgoingWebRtcEndpoint().connect(incomingEndpoint);
 
         incomingEndpoint.addIceCandidateFoundListener(iceCandidateFoundEvent -> {
             Map<String, Object> message = Map.of(
